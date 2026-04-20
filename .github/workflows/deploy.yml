@@ -1,1 +1,27 @@
-# Deploy workflow
+name: Deploy (Phase 8)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to ECS
+    runs-on: ubuntu-latest
+    # Optional: wait for CI to pass before deploying
+    # needs: ci
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy step — Phase 8 placeholder
+        run: |
+          echo "Deploy step — to be implemented in Phase 8"
+          echo "Planned actions:"
+          echo "  - Configure AWS credentials"
+          echo "  - Login to ECR"
+          echo "  - Build and push Docker image"
+          echo "  - Update ECS Fargate service"
+          echo "  - Wait for deployment to stabilize"
