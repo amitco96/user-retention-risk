@@ -5,7 +5,18 @@
       "Read(//c/user-retention-risk//**)",
       "mcp__filesystem__create_directory",
       "Bash(grep -v '^\\\\.$')",
-      "mcp__github__create_repository"
+      "mcp__github__create_repository",
+      "Bash(git commit *)",
+      "Bash(git branch *)",
+      "Bash(git push *)",
+      "mcp__github__list_commits",
+      "Bash(python -m pytest backend/tests/test_health.py -v)",
+      "Bash(dir backend\\\\__init__.py backend\\\\app\\\\__init__.py backend\\\\app\\\\routers\\\\__init__.py)",
+      "Bash(docker-compose up *)",
+      "Bash(docker-compose logs *)",
+      "Bash(docker-compose -f infrastructure/docker-compose.yml logs retention-app --tail 30)",
+      "Bash(curl -s http://localhost:8000/health)",
+      "Bash(curl -i http://localhost:8000/health)"
     ]
   }
 }

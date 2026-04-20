@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker-compose down *)",
+      "Bash(docker-compose -f infrastructure/docker-compose.yml down)",
+      "Bash(docker-compose -f infrastructure/docker-compose.yml up --build -d)",
+      "Bash(docker-compose exec *)",
+      "mcp__postgres__query"
+    ]
+  }
+}
