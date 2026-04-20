@@ -5,7 +5,25 @@
       "Bash(docker-compose -f infrastructure/docker-compose.yml down)",
       "Bash(docker-compose -f infrastructure/docker-compose.yml up --build -d)",
       "Bash(docker-compose exec *)",
-      "mcp__postgres__query"
+      "mcp__postgres__query",
+      "Bash(python -m pytest backend/tests/test_explainer.py -v)",
+      "Bash(python -c \"import sys; print\\(f'Python: {sys.version}'\\); import xgboost; print\\(f'XGBoost: {xgboost.__version__}'\\)\")",
+      "Bash(pip show *)",
+      "Bash(python -c \"import xgboost; import shap; import pandas; print\\('Packages loaded'\\)\")",
+      "Bash(python -c \"import sys; print\\(sys.executable\\)\")",
+      "Bash(python -m pip install anthropic==0.25.0 -q)",
+      "Bash(python -c \"from backend.app.ml.explainer import explain_risk, RiskExplanation; print\\('✓ Successfully imported explain_risk and RiskExplanation'\\); print\\('✓ RiskExplanation:', RiskExplanation.__name__\\)\")",
+      "Bash(python -c \"from backend.app.ml.explainer import explain_risk, RiskExplanation; print\\('Successfully imported explain_risk and RiskExplanation'\\); print\\('RiskExplanation:', RiskExplanation.__name__\\)\")",
+      "Bash(python -m pytest backend/tests/test_explainer.py -v --tb=short)",
+      "Bash(timeout 30 bash -c 'until python -c \"import xgboost; import shap; print\\(\\\\\"OK\\\\\"\\)\" 2>/dev/null; do sleep 1; done')",
+      "Bash(python -m pytest backend/tests/test_explainer.py -v --co -q)",
+      "Bash(python -m pytest backend/tests/test_explainer.py -v --tb=line)",
+      "Bash(python)",
+      "Bash(python -m pip install --upgrade pip setuptools wheel -q)",
+      "Bash(python -m py_compile /c/user-retention-risk/ml/feature_engineering.py /c/user-retention-risk/ml/train.py /c/user-retention-risk/backend/app/ml/model.py)",
+      "mcp__filesystem__read_multiple_files",
+      "mcp__filesystem__get_file_info",
+      "mcp__filesystem__list_directory"
     ]
   }
 }

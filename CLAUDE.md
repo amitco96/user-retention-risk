@@ -2,6 +2,21 @@
 
 Production-grade ML system that scores user churn risk in real-time and explains WHY each user is at risk using Claude — deployed on AWS ECS Fargate.
 
+## Progress
+
+**Phase 1: ✓ COMPLETE** (commit b72f5fd)
+- SQLAlchemy 2.0 async ORM models (users, events, risk_scores) with PostgreSQL 16
+- Async session factory with auto-create tables on startup
+- Synthetic data generator: 1000 users, 85,638 events, 17% churn rate
+- Docker stack: FastAPI /health, postgres service, docker-compose orchestration
+- Commit: *feat: phase 1 — SQLAlchemy models + PostgreSQL data seeding*
+- **Note**: switching from synthetic data to Sparkify dataset (Udacity mini, 128MB) — raw event logs from a music streaming service
+
+**Phase 2: IN PROGRESS**
+- Feature engineering (pandas + SQL feature extraction)
+- XGBoost model training + SHAP explainability
+- Claude integration for reason/action generation
+
 ---
 
 ## Architecture
@@ -49,7 +64,7 @@ user-retention-risk/
 │   ├── tests/
 │   └── requirements.txt
 ├── ml/
-│   ├── data_gen.py
+│   ├── data_loader.py
 │   ├── feature_engineering.py
 │   ├── train.py
 │   ├── model_card.md
@@ -80,7 +95,7 @@ user-retention-risk/
 
 ## Agent Roster
 
-**`data-engineer`** — Schema design, SQLAlchemy ORM models, data_gen.py, seed scripts. Does not touch ML, API, or infra.
+**`data-engineer`** — Schema design, SQLAlchemy ORM models, data_loader.py, seed scripts. Does not touch ML, API, or infra.
 
 **`ml-engineer`** — Feature engineering, XGBoost training, SHAP analysis, model serialization, model_card.md. Does not touch API or infra.
 
@@ -123,37 +138,45 @@ user-retention-risk/
 
 ---
 
-## Data Schema
+## Dataset
 
-### `users`
-`id` (UUID PK), `email`, `plan_type` (free/starter/pro/enterprise), `signup_date`, `created_at`, `updated_at`
+**Sparkify (Udacity mini — 128MB)**
+Raw event logs from a fictitious music streaming service.
+Download: search "Sparkify dataset" on Kaggle or Udacity.
+Place at: `ml/data/sparkify_mini.json`
 
-### `events`
-`id` (UUID PK), `user_id` (FK), `event_type` (login/feature_used/support_ticket), `event_metadata` (JSONB), `occurred_at`
-Indexes: `(user_id)`, `(occurred_at)`, `(user_id, occurred_at DESC)`
+Key raw columns used:
+- `userId` — user identifier
+- `sessionId` — groups events into sessions
+- `page` — event type (NextSong, Thumbs Up, Add to Playlist, Roll Advert, Logout, Submit Downgrade, Cancellation Confirmation)
+- `ts` — event timestamp (ms)
+- `level` — subscription tier (free/paid)
+- `registration` — account creation timestamp
+- `length` — song duration (seconds)
+- `gender`, `location` — user demographics
 
-### `risk_scores`
-`id` (UUID PK), `user_id` (FK), `risk_score` (int 0–100), `risk_tier` (low/medium/high/critical), `top_drivers` (text[]), `shap_values` (JSONB), `claude_reason` (text), `claude_action` (text), `model_version`, `scored_at`
-Indexes: `(user_id)`, `(scored_at DESC)`, `(risk_score DESC)`
+Churn label: user who visited "Cancellation Confirmation" page
 
 ---
 
 ## ML Features
 
+Engineered from raw Sparkify events in `ml/feature_engineering.py`:
+
 ```python
 FEATURES = [
-    "days_since_last_login",   # recency
-    "session_count_30d",       # frequency
-    "feature_usage_count",     # depth
-    "support_tickets_open",    # friction
-    "plan_type_encoded",       # value tier (free=0 → enterprise=3)
-    "avg_session_duration_min",# quality
-    "days_since_signup",       # tenure
-    "login_streak_broken",     # binary: streak broken in last 7d
+    "days_since_last_activity",  # recency
+    "session_count_30d",         # frequency
+    "songs_played_total",        # depth of engagement
+    "thumbs_up_count",           # positive signal
+    "thumbs_down_count",         # negative signal
+    "add_to_playlist_count",     # stickiness signal
+    "avg_session_duration_min",  # quality
+    "subscription_level",        # free=0 / paid=1
 ]
 ```
 
-Churn label: `days_since_last_login >= 30 AND sessions_60d < 3`
+Churn label: userId appears on "Cancellation Confirmation" page
 Target: AUC-ROC ≥ 0.82
 
 ---
@@ -220,8 +243,11 @@ Respond only in JSON: {"reason": "...", "action": "..."}
 ## Definition of Done
 
 A phase is complete when:
-- [ ] All phase deliverables implemented
+- [x] **Phase 1**: All deliverables (models, session, data_gen, docker stack)
+- [x] SQLAlchemy ORM models + PostgreSQL schema (/c/user-retention-risk/backend/app/db/)
+- [x] Data seeding: 1000 users, 85k events, realistic cohorts
+- [x] Docker stack operational (FastAPI + Postgres)
+- [ ] Phase 2: Feature engineering + XGBoost model training
 - [ ] `pytest --cov=backend/app` passes at ≥ 80% coverage
 - [ ] `/review` returns no critical issues
-- [ ] Feature works end-to-end in docker-compose
 - [ ] `git grep -r "sk-ant"` returns nothing
