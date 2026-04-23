@@ -3,7 +3,8 @@ import json
 import logging
 from dataclasses import dataclass
 from typing import Dict, Any
-import anthropic
+import httpx
+from anthropic import AsyncClient, APIError
 
 logger = logging.getLogger(__name__)
 
@@ -85,42 +86,41 @@ In ONE sentence each:
 Respond only in JSON: {{"reason": "...", "action": "..."}}"""
 
     try:
-        client = anthropic.Anthropic(api_key=api_key)
-        message = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=256,
-            timeout=10.0,
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
+        async with AsyncClient(api_key=api_key, timeout=10.0) as client:
+            message = await client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=256,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
 
-        # Extract text from response
-        response_text = message.content[0].text
+            # Extract text from response
+            response_text = message.content[0].text
 
-        # Parse JSON response
-        try:
-            response_json = json.loads(response_text)
-            reason = response_json.get("reason", "").strip()
-            action = response_json.get("action", "").strip()
+            # Parse JSON response
+            try:
+                response_json = json.loads(response_text)
+                reason = response_json.get("reason", "").strip()
+                action = response_json.get("action", "").strip()
 
-            if not reason or not action:
-                logger.warning("Claude response missing reason or action, using fallback")
+                if not reason or not action:
+                    logger.warning("Claude response missing reason or action, using fallback")
+                    return RiskExplanation(
+                        reason="Unable to analyze.",
+                        action="Contact support."
+                    )
+
+                return RiskExplanation(reason=reason, action=action)
+
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to parse Claude response as JSON: {response_text}")
                 return RiskExplanation(
                     reason="Unable to analyze.",
                     action="Contact support."
                 )
 
-            return RiskExplanation(reason=reason, action=action)
-
-        except json.JSONDecodeError:
-            logger.warning(f"Failed to parse Claude response as JSON: {response_text}")
-            return RiskExplanation(
-                reason="Unable to analyze.",
-                action="Contact support."
-            )
-
-    except anthropic.APIError as e:
+    except APIError as e:
         logger.error(f"Claude API error: {e}")
         return RiskExplanation(
             reason="Unable to analyze.",
