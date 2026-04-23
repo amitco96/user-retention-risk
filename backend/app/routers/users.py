@@ -11,6 +11,7 @@ Rate limited to 100 req/min per IP on /risk endpoint.
 
 import logging
 import uuid
+import json
 from datetime import datetime
 from typing import List
 
@@ -82,16 +83,8 @@ async def get_user_risk(
                 detail="No events found for user. Cannot score.",
             )
 
-        # Extract features from events
-        user_events_list = [
-            {
-                "event_type": e.event_type,
-                "event_metadata": e.event_metadata,
-                "occurred_at": e.occurred_at,
-            }
-            for e in events
-        ]
-        features = extract_user_features(user_events_list)
+        # Extract features from events (pass Event objects directly)
+        features = extract_user_features(events)
 
         # Score with model
         prediction = predict(user_id, features)
@@ -130,10 +123,10 @@ async def get_user_risk(
 
         # Save to risk_scores table (optional: async save)
         risk_score_record = RiskScore(
-            user_id=user_id,
+            user_id=user_uuid,
             risk_score=prediction.risk_score,
             risk_tier=prediction.risk_tier,
-            top_drivers=prediction.top_drivers,
+            top_drivers=json.dumps(prediction.top_drivers),
             shap_values=prediction.shap_values,
             claude_reason=explanation.reason,
             claude_action=explanation.action,

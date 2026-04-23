@@ -99,7 +99,7 @@ def predict(user_id: str, features: Dict[str, float]) -> RiskPrediction:
     risk_proba = _model.predict_proba(X_scaled)[0, 1]  # Probability of churn
     risk_score = int(risk_proba * 100)
 
-    # Get SHAP values
+    # Get SHAP values using TreeExplainer
     explainer = shap.TreeExplainer(_model)
     shap_values = explainer.shap_values(X_scaled)
 

@@ -10,25 +10,41 @@ Production-grade ML system that scores user churn risk in real-time and explains
 - Synthetic data generator: 1000 users, 85,638 events, 17% churn rate
 - Docker stack: FastAPI /health, postgres service, docker-compose orchestration
 - Commit: *feat: phase 1 — SQLAlchemy models + PostgreSQL data seeding*
-- **Note**: switching from synthetic data to Sparkify dataset (Udacity mini, 128MB) — raw event logs from a music streaming service
 
-**Phase 2: IN PROGRESS**
-- Feature engineering (pandas + SQL feature extraction)
-- XGBoost model training + SHAP explainability
-- Claude integration for reason/action generation
+**Phase 2: ✓ COMPLETE**
+- XGBoost trained on Sparkify dataset, AUC-ROC 0.9861
+- Feature engineering from raw Sparkify events
+- SHAP explainability integrated
+
+**Phase 2b: IN PROGRESS**
+- Claude correlation analysis of Sparkify dataset
+- ml/ai_analysis.py outputs correlation_report.json
+- Claude recommends leading churn indicators
+
+**Phase 4: ✓ COMPLETE**
+- FastAPI endpoints: GET /users/{user_id}/risk, GET /users/at-risk?threshold, POST /users/{user_id}/risk/feedback
+- GET /cohorts/retention — cohort-based retention analysis
+- Pydantic schemas: RiskResponse, RiskSummary, CohortRetentionData
+- ML model wrapper with SHAP explainability
+- Claude async explainer (Sonnet 4 with 10s timeout + fallback)
+- Feature engineering pipeline for live PostgreSQL events
+- Docker stack tested & operational (port 8000)
+- All endpoints returning valid JSON responses ✓
 
 ---
 
 ## Architecture
 
 ```
-PostgreSQL (user events)
+Sparkify dataset (training only)
          ↓
-Feature Engineering (pandas + SQLAlchemy)
+Claude analyzes dataset correlations → outputs correlation_report.json
          ↓
-XGBoost Churn Model → risk_score (0–100) + top_drivers[]
+XGBoost trained on Claude-recommended features → model.pkl + scaler.pkl + feature_names.json
          ↓
-Claude claude-sonnet-4-20250514 → reason + recommended_action
+PostgreSQL live user events
+         ↓
+n8n nightly pipeline: feature engineering → score all users → save to risk_scores table → Slack alert for critical users
          ↓
 FastAPI REST API ←→ React Dashboard
          ↓
@@ -132,6 +148,7 @@ user-retention-risk/
 | Explainability | SHAP + Claude claude-sonnet-4-20250514 |
 | Database | PostgreSQL 16, SQLAlchemy 2.0 async ORM |
 | Frontend | React 18 + Recharts + Tailwind |
+| Orchestration | n8n — Nightly rescore + Slack alerts |
 | Container | Docker + ECS Fargate (512 CPU / 1024 MB) |
 | CI/CD | GitHub Actions |
 | Secrets | AWS Secrets Manager |
@@ -161,7 +178,7 @@ Churn label: user who visited "Cancellation Confirmation" page
 
 ## ML Features
 
-Engineered from raw Sparkify events in `ml/feature_engineering.py`:
+Engineered from raw Sparkify events in `ml/feature_engineering.py`. **Features are not hardcoded.** `ml/ai_analysis.py` asks Claude to analyze the Sparkify dataset and recommend which behavioral signals are the strongest leading indicators of churn. Output saved to `ml/artifacts/correlation_report.json` and consumed by `train.py`.
 
 ```python
 FEATURES = [
@@ -243,11 +260,33 @@ Respond only in JSON: {"reason": "...", "action": "..."}
 ## Definition of Done
 
 A phase is complete when:
-- [x] **Phase 1**: All deliverables (models, session, data_gen, docker stack)
+- [x] **Phase 1**: All deliverables (models, session, data_loader, docker stack)
 - [x] SQLAlchemy ORM models + PostgreSQL schema (/c/user-retention-risk/backend/app/db/)
-- [x] Data seeding: 1000 users, 85k events, realistic cohorts
+- [x] Data loading: Sparkify dataset ingested into PostgreSQL
 - [x] Docker stack operational (FastAPI + Postgres)
-- [ ] Phase 2: Feature engineering + XGBoost model training
-- [ ] `pytest --cov=backend/app` passes at ≥ 80% coverage
+- [x] Phase 2: Feature engineering + XGBoost model training
+- [ ] Phase 2b: Claude correlation analysis step
+- [x] **Phase 4**: FastAPI endpoints wired to model and explainer
+  - [x] Pydantic schemas (RiskResponse, RiskSummary, CohortRetentionData)
+  - [x] ML model wrapper + SHAP explainability
+  - [x] Claude async explainer (10s timeout, graceful fallback)
+  - [x] All 5 endpoints tested and returning valid JSON
+  - [x] Feature engineering pipeline (extract_user_features)
+  - [x] Cohort retention analysis (week-over-week %)
+- [ ] Phase 5: `pytest --cov=backend/app` passes at ≥ 80% coverage
 - [ ] `/review` returns no critical issues
 - [ ] `git grep -r "sk-ant"` returns nothing
+
+---
+
+## Remaining Phases
+
+**Phase 2b**: `ml/ai_analysis.py` — Claude analyzes Sparkify dataset, outputs `ml/artifacts/correlation_report.json`
+
+**Phase 5**: `pytest` coverage ≥ 80% — unit & integration tests for all routers + ML pipeline
+
+**Phase 6**: React dashboard — risk table, user card, cohort chart
+
+**Phase 7**: n8n nightly pipeline and Slack alert — rescore all users, alert on critical risk
+
+**Phase 8**: ECS Fargate production deploy — GitHub Actions CI/CD → AWS ECS

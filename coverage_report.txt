@@ -1,0 +1,1742 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.0.3, pluggy-1.6.0
+rootdir: c:\user-retention-risk
+plugins: anyio-4.13.0, asyncio-1.3.0, cov-7.1.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 151 items
+
+backend\tests\test_api.py ....F.........F..F............F...F.FF..       [ 26%]
+backend\tests\test_db.py ....F.....F.                                    [ 34%]
+backend\tests\test_endpoints.py FFF                                      [ 36%]
+backend\tests\test_explainer.py FFF.........F..FFFF                      [ 49%]
+backend\tests\test_features.py ..................                        [ 60%]
+backend\tests\test_health.py .                                           [ 61%]
+backend\tests\test_model.py ..................                           [ 73%]
+backend\tests\test_routers.py ......................                     [ 88%]
+backend\tests\test_schemas.py ..................                         [100%]
+
+================================== FAILURES ===================================
+_____ TestGetUserRiskEndpoint.test_get_user_risk_invalid_uuid_returns_422 _____
+
+self = <backend.tests.test_api.TestGetUserRiskEndpoint object at 0x000001788CC80550>
+
+    def test_get_user_risk_invalid_uuid_returns_422(self):
+        """Test that invalid UUID format returns 422."""
+        invalid_ids = [
+            "not-a-uuid",
+            "123",
+            "user@example.com",
+            "12345678-1234-1234-1234",
+            "",
+            "invalid",
+        ]
+    
+        for invalid_id in invalid_ids:
+            response = client.get(f"/users/{invalid_id}/risk")
+>           assert response.status_code == 422, f"Expected 422 for {invalid_id}, got {response.status_code}"
+E           AssertionError: Expected 422 for , got 404
+E           assert 404 == 422
+E            +  where 404 = <Response [404 Not Found]>.status_code
+
+backend\tests\test_api.py:70: AssertionError
+---------------------------- Captured stderr call -----------------------------
+INFO:httpx:HTTP Request: GET http://testserver/users/not-a-uuid/risk "HTTP/1.1 422 Unprocessable Entity"
+INFO:httpx:HTTP Request: GET http://testserver/users/123/risk "HTTP/1.1 422 Unprocessable Entity"
+INFO:httpx:HTTP Request: GET http://testserver/users/user@example.com/risk "HTTP/1.1 422 Unprocessable Entity"
+INFO:httpx:HTTP Request: GET http://testserver/users/12345678-1234-1234-1234/risk "HTTP/1.1 422 Unprocessable Entity"
+INFO:httpx:HTTP Request: GET http://testserver/users//risk "HTTP/1.1 404 Not Found"
+------------------------------ Captured log call ------------------------------
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/users/not-a-uuid/risk "HTTP/1.1 422 Unprocessable Entity"
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/users/123/risk "HTTP/1.1 422 Unprocessable Entity"
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/users/user@example.com/risk "HTTP/1.1 422 Unprocessable Entity"
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/users/12345678-1234-1234-1234/risk "HTTP/1.1 422 Unprocessable Entity"
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/users//risk "HTTP/1.1 404 Not Found"
+_ TestPostRiskFeedbackEndpoint.test_risk_feedback_nonexistent_user_returns_404 _
+
+self = <backend.tests.test_api.TestPostRiskFeedbackEndpoint object at 0x000001788CC902D0>
+
+    def test_risk_feedback_nonexistent_user_returns_404(self):
+        """Test that non-existent user returns 404 (or 500 if no risk score exists)."""
+        fake_id = uuid.uuid4()
+        response = client.post(
+            f"/users/{fake_id}/risk/feedback",
+            json={"action": "email_sent"},
+        )
+        # Should be 404 if the user exists but has no risk score, or 500 for DB error
+>       assert response.status_code in [404, 500]
+E       assert 422 in [404, 500]
+E        +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+
+backend\tests\test_api.py:167: AssertionError
+---------------------------- Captured stderr call -----------------------------
+INFO:httpx:HTTP Request: POST http://testserver/users/ffc06d2a-3e73-4f4f-b1ad-b932cd56a3da/risk/feedback "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call ------------------------------
+INFO     httpx:_client.py:1025 HTTP Request: POST http://testserver/users/ffc06d2a-3e73-4f4f-b1ad-b932cd56a3da/risk/feedback "HTTP/1.1 422 Unprocessable Entity"
+_______ TestPostRiskFeedbackEndpoint.test_risk_feedback_various_actions _______
+
+self = <backend.tests.test_api.TestPostRiskFeedbackEndpoint object at 0x000001788CC91810>
+
+    def test_risk_feedback_various_actions(self):
+        """Test POST with various action values."""
+        user_id = uuid.uuid4()
+        actions = ["email_sent", "call_scheduled", "discount_offered", "manual_review"]
+    
+        for action in actions:
+            response = client.post(
+                f"/users/{user_id}/risk/feedback",
+                json={"action": action},
+            )
+            # Should either succeed (200) or fail with 404/500 (user not found)
+>           assert response.status_code in [200, 404, 500]
+E           assert 422 in [200, 404, 500]
+E            +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+
+backend\tests\test_api.py:197: AssertionError
+---------------------------- Captured stderr call -----------------------------
+INFO:httpx:HTTP Request: POST http://testserver/users/0226d0fe-e529-4d7a-9ce7-92d4c84ce5df/risk/feedback "HTTP/1.1 422 Unprocessable Entity"
+------------------------------ Captured log call ------------------------------
+INFO     httpx:_client.py:1025 HTTP Request: POST http://testserver/users/0226d0fe-e529-4d7a-9ce7-92d4c84ce5df/risk/feedback "HTTP/1.1 422 Unprocessable Entity"
+___ TestEndpointIntegration.test_cohort_retention_endpoint_always_available ___
+
+self = <backend.tests.test_api.TestEndpointIntegration object at 0x000001788CC992D0>
+
+    def test_cohort_retention_endpoint_always_available(self):
+        """Test that cohort retention endpoint is always available."""
+        response = client.get("/cohorts/retention")
+>       assert response.status_code == 200
+E       assert 500 == 200
+E        +  where 500 = <Response [500 Internal Server Error]>.status_code
+
+backend\tests\test_api.py:304: AssertionError
+---------------------------- Captured stderr call -----------------------------
+ERROR:sqlalchemy.pool.impl.AsyncAdaptedQueuePool:Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x000001788CEE8F40>>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 617, in close
+  File "asyncpg/protocol/protocol.pyx", line 650, in asyncpg.protocol.protocol.BaseProtocol._request_cancel
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 1682, in _cancel_current_command
+    self._cancellations.add(self._loop.create_task(self._cancel(waiter)))
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 435, in create_task
+    self._check_closed()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR:backend.app.routers.cohorts:Error computing cohort retention: 'NoneType' object has no attribute 'send'
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 762, in call_soon
+    self._check_closed()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\user-retention-risk\backend\app\routers\cohorts.py", line 65, in get_cohort_retention
+    result = await db.execute(stmt)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 449, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 201, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2239, in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2108, in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 2, in _connection_for_bind
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 1187, in _connection_for_bind
+    conn = bind.connect()
+           ^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 3293, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 143, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 3317, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 1371, in _checkout
+    with util.safe_reraise():
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 121, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 1309, in _checkout
+    result = pool._dialect._do_ping_w_event(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\default.py", line 729, in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1160, in do_ping
+    dbapi_connection.ping()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 818, in ping
+    self._handle_exception(error)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 799, in _handle_exception
+    raise error
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 816, in ping
+    _ = self.await_(self._async_ping())
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 825, in _async_ping
+    await tr.start()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\transaction.py", line 146, in start
+    await self._connection.execute(query)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 354, in execute
+    result = await self._protocol.query(query, timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg/protocol/protocol.pyx", line 369, in query
+  File "asyncpg/protocol/protocol.pyx", line 362, in asyncpg.protocol.protocol.BaseProtocol.query
+  File "asyncpg/protocol/coreproto.pyx", line 1174, in asyncpg.protocol.protocol.CoreProtocol._simple_query
+  File "asyncpg/protocol/protocol.pyx", line 956, in asyncpg.protocol.protocol.BaseProtocol._write
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\proactor_events.py", line 365, in write
+    self._loop_writing(data=bytes(data))
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\proactor_events.py", line 401, in _loop_writing
+    self._write_fut = self._loop._proactor.send(self._sock, data)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'send'
+INFO:httpx:HTTP Request: GET http://testserver/cohorts/retention "HTTP/1.1 500 Internal Server Error"
+------------------------------ Captured log call ------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:377 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x000001788CEE8F40>>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 617, in close
+  File "asyncpg/protocol/protocol.pyx", line 650, in asyncpg.protocol.protocol.BaseProtocol._request_cancel
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 1682, in _cancel_current_command
+    self._cancellations.add(self._loop.create_task(self._cancel(waiter)))
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 435, in create_task
+    self._check_closed()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR    backend.app.routers.cohorts:cohorts.py:147 Error computing cohort retention: 'NoneType' object has no attribute 'send'
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 762, in call_soon
+    self._check_closed()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\user-retention-risk\backend\app\routers\cohorts.py", line 65, in get_cohort_retention
+    result = await db.execute(stmt)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 449, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 201, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2239, in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2108, in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 2, in _connection_for_bind
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 1187, in _connection_for_bind
+    conn = bind.connect()
+           ^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 3293, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 143, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 3317, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 1371, in _checkout
+    with util.safe_reraise():
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 121, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 1309, in _checkout
+    result = pool._dialect._do_ping_w_event(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\default.py", line 729, in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1160, in do_ping
+    dbapi_connection.ping()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 818, in ping
+    self._handle_exception(error)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 799, in _handle_exception
+    raise error
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 816, in ping
+    _ = self.await_(self._async_ping())
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 825, in _async_ping
+    await tr.start()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\transaction.py", line 146, in start
+    await self._connection.execute(query)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 354, in execute
+    result = await self._protocol.query(query, timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg/protocol/protocol.pyx", line 369, in query
+  File "asyncpg/protocol/protocol.pyx", line 362, in asyncpg.protocol.protocol.BaseProtocol.query
+  File "asyncpg/protocol/coreproto.pyx", line 1174, in asyncpg.protocol.protocol.CoreProtocol._simple_query
+  File "asyncpg/protocol/protocol.pyx", line 956, in asyncpg.protocol.protocol.BaseProtocol._write
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\proactor_events.py", line 365, in write
+    self._loop_writing(data=bytes(data))
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\proactor_events.py", line 401, in _loop_writing
+    self._write_fut = self._loop._proactor.send(self._sock, data)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'send'
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/cohorts/retention "HTTP/1.1 500 Internal Server Error"
+________ TestResponseValidation.test_cohort_retention_matrix_alignment ________
+
+self = <backend.tests.test_api.TestResponseValidation object at 0x000001788CC9AD90>
+
+    def test_cohort_retention_matrix_alignment(self):
+        """Test that retention matrix is properly aligned with cohort/week labels."""
+        response = client.get("/cohorts/retention")
+        data = response.json()
+    
+>       cohorts = data["cohorts"]
+                  ^^^^^^^^^^^^^^^
+E       KeyError: 'cohorts'
+
+backend\tests\test_api.py:358: KeyError
+---------------------------- Captured stderr call -----------------------------
+ERROR:sqlalchemy.pool.impl.AsyncAdaptedQueuePool:Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x000001788D4D96C0>>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 617, in close
+  File "asyncpg/protocol/protocol.pyx", line 650, in asyncpg.protocol.protocol.BaseProtocol._request_cancel
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 1682, in _cancel_current_command
+    self._cancellations.add(self._loop.create_task(self._cancel(waiter)))
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 435, in create_task
+    self._check_closed()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR:backend.app.routers.cohorts:Error computing cohort retention: 'NoneType' object has no attribute 'send'
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 762, in call_soon
+    self._check_closed()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\user-retention-risk\backend\app\routers\cohorts.py", line 65, in get_cohort_retention
+    result = await db.execute(stmt)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 449, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 201, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2239, in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2108, in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 2, in _connection_for_bind
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 1187, in _connection_for_bind
+    conn = bind.connect()
+           ^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 3293, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 143, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 3317, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 1371, in _checkout
+    with util.safe_reraise():
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 121, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 1309, in _checkout
+    result = pool._dialect._do_ping_w_event(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\default.py", line 729, in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1160, in do_ping
+    dbapi_connection.ping()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 818, in ping
+    self._handle_exception(error)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 799, in _handle_exception
+    raise error
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 816, in ping
+    _ = self.await_(self._async_ping())
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 825, in _async_ping
+    await tr.start()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\transaction.py", line 146, in start
+    await self._connection.execute(query)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 354, in execute
+    result = await self._protocol.query(query, timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg/protocol/protocol.pyx", line 369, in query
+  File "asyncpg/protocol/protocol.pyx", line 362, in asyncpg.protocol.protocol.BaseProtocol.query
+  File "asyncpg/protocol/coreproto.pyx", line 1174, in asyncpg.protocol.protocol.CoreProtocol._simple_query
+  File "asyncpg/protocol/protocol.pyx", line 956, in asyncpg.protocol.protocol.BaseProtocol._write
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\proactor_events.py", line 365, in write
+    self._loop_writing(data=bytes(data))
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\proactor_events.py", line 401, in _loop_writing
+    self._write_fut = self._loop._proactor.send(self._sock, data)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'send'
+INFO:httpx:HTTP Request: GET http://testserver/cohorts/retention "HTTP/1.1 500 Internal Server Error"
+------------------------------ Captured log call ------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:377 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x000001788D4D96C0>>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 617, in close
+  File "asyncpg/protocol/protocol.pyx", line 650, in asyncpg.protocol.protocol.BaseProtocol._request_cancel
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 1682, in _cancel_current_command
+    self._cancellations.add(self._loop.create_task(self._cancel(waiter)))
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 435, in create_task
+    self._check_closed()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR    backend.app.routers.cohorts:cohorts.py:147 Error computing cohort retention: 'NoneType' object has no attribute 'send'
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 762, in call_soon
+    self._check_closed()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\user-retention-risk\backend\app\routers\cohorts.py", line 65, in get_cohort_retention
+    result = await db.execute(stmt)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 449, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 201, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2239, in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2108, in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 2, in _connection_for_bind
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 1187, in _connection_for_bind
+    conn = bind.connect()
+           ^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 3293, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 143, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 3317, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 1371, in _checkout
+    with util.safe_reraise():
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 121, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 1309, in _checkout
+    result = pool._dialect._do_ping_w_event(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\default.py", line 729, in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1160, in do_ping
+    dbapi_connection.ping()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 818, in ping
+    self._handle_exception(error)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 799, in _handle_exception
+    raise error
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 816, in ping
+    _ = self.await_(self._async_ping())
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 825, in _async_ping
+    await tr.start()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\transaction.py", line 146, in start
+    await self._connection.execute(query)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 354, in execute
+    result = await self._protocol.query(query, timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg/protocol/protocol.pyx", line 369, in query
+  File "asyncpg/protocol/protocol.pyx", line 362, in asyncpg.protocol.protocol.BaseProtocol.query
+  File "asyncpg/protocol/coreproto.pyx", line 1174, in asyncpg.protocol.protocol.CoreProtocol._simple_query
+  File "asyncpg/protocol/protocol.pyx", line 956, in asyncpg.protocol.protocol.BaseProtocol._write
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\proactor_events.py", line 365, in write
+    self._loop_writing(data=bytes(data))
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\proactor_events.py", line 401, in _loop_writing
+    self._write_fut = self._loop._proactor.send(self._sock, data)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'send'
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/cohorts/retention "HTTP/1.1 500 Internal Server Error"
+_________________ TestConcurrency.test_mixed_endpoints_calls __________________
+
+self = <backend.tests.test_api.TestConcurrency object at 0x000001788CC9BC10>
+
+    def test_mixed_endpoints_calls(self):
+        """Test calling different endpoints in sequence."""
+        responses = [
+            client.get("/health"),
+            client.get("/users/at-risk?threshold=50"),
+            client.get("/cohorts/retention"),
+        ]
+    
+        for response in responses:
+>           assert response.status_code == 200
+E           assert 500 == 200
+E            +  where 500 = <Response [500 Internal Server Error]>.status_code
+
+backend\tests\test_api.py:386: AssertionError
+---------------------------- Captured stderr call -----------------------------
+INFO:httpx:HTTP Request: GET http://testserver/health "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://testserver/users/at-risk?threshold=50 "HTTP/1.1 200 OK"
+ERROR:sqlalchemy.pool.impl.AsyncAdaptedQueuePool:Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x000001788D4DAE30>>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 617, in close
+  File "asyncpg/protocol/protocol.pyx", line 650, in asyncpg.protocol.protocol.BaseProtocol._request_cancel
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 1682, in _cancel_current_command
+    self._cancellations.add(self._loop.create_task(self._cancel(waiter)))
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 435, in create_task
+    self._check_closed()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR:backend.app.routers.cohorts:Error computing cohort retention: 'NoneType' object has no attribute 'send'
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 762, in call_soon
+    self._check_closed()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\user-retention-risk\backend\app\routers\cohorts.py", line 65, in get_cohort_retention
+    result = await db.execute(stmt)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 449, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 201, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2239, in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2108, in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 2, in _connection_for_bind
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 1187, in _connection_for_bind
+    conn = bind.connect()
+           ^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 3293, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 143, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 3317, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 1371, in _checkout
+    with util.safe_reraise():
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 121, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 1309, in _checkout
+    result = pool._dialect._do_ping_w_event(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\default.py", line 729, in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1160, in do_ping
+    dbapi_connection.ping()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 818, in ping
+    self._handle_exception(error)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 799, in _handle_exception
+    raise error
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 816, in ping
+    _ = self.await_(self._async_ping())
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 825, in _async_ping
+    await tr.start()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\transaction.py", line 146, in start
+    await self._connection.execute(query)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 354, in execute
+    result = await self._protocol.query(query, timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg/protocol/protocol.pyx", line 369, in query
+  File "asyncpg/protocol/protocol.pyx", line 362, in asyncpg.protocol.protocol.BaseProtocol.query
+  File "asyncpg/protocol/coreproto.pyx", line 1174, in asyncpg.protocol.protocol.CoreProtocol._simple_query
+  File "asyncpg/protocol/protocol.pyx", line 956, in asyncpg.protocol.protocol.BaseProtocol._write
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\proactor_events.py", line 365, in write
+    self._loop_writing(data=bytes(data))
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\proactor_events.py", line 401, in _loop_writing
+    self._write_fut = self._loop._proactor.send(self._sock, data)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'send'
+INFO:httpx:HTTP Request: GET http://testserver/cohorts/retention "HTTP/1.1 500 Internal Server Error"
+------------------------------ Captured log call ------------------------------
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/health "HTTP/1.1 200 OK"
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/users/at-risk?threshold=50 "HTTP/1.1 200 OK"
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:377 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x000001788D4DAE30>>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 617, in close
+  File "asyncpg/protocol/protocol.pyx", line 650, in asyncpg.protocol.protocol.BaseProtocol._request_cancel
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 1682, in _cancel_current_command
+    self._cancellations.add(self._loop.create_task(self._cancel(waiter)))
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 435, in create_task
+    self._check_closed()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR    backend.app.routers.cohorts:cohorts.py:147 Error computing cohort retention: 'NoneType' object has no attribute 'send'
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 762, in call_soon
+    self._check_closed()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\user-retention-risk\backend\app\routers\cohorts.py", line 65, in get_cohort_retention
+    result = await db.execute(stmt)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 449, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 201, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2239, in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2108, in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 2, in _connection_for_bind
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 1187, in _connection_for_bind
+    conn = bind.connect()
+           ^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 3293, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 143, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 3317, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 1371, in _checkout
+    with util.safe_reraise():
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 121, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 1309, in _checkout
+    result = pool._dialect._do_ping_w_event(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\default.py", line 729, in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1160, in do_ping
+    dbapi_connection.ping()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 818, in ping
+    self._handle_exception(error)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 799, in _handle_exception
+    raise error
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 816, in ping
+    _ = self.await_(self._async_ping())
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 825, in _async_ping
+    await tr.start()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\transaction.py", line 146, in start
+    await self._connection.execute(query)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 354, in execute
+    result = await self._protocol.query(query, timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg/protocol/protocol.pyx", line 369, in query
+  File "asyncpg/protocol/protocol.pyx", line 362, in asyncpg.protocol.protocol.BaseProtocol.query
+  File "asyncpg/protocol/coreproto.pyx", line 1174, in asyncpg.protocol.protocol.CoreProtocol._simple_query
+  File "asyncpg/protocol/protocol.pyx", line 956, in asyncpg.protocol.protocol.BaseProtocol._write
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\proactor_events.py", line 365, in write
+    self._loop_writing(data=bytes(data))
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\proactor_events.py", line 401, in _loop_writing
+    self._write_fut = self._loop._proactor.send(self._sock, data)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'send'
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/cohorts/retention "HTTP/1.1 500 Internal Server Error"
+_________ TestRequestValidation.test_query_parameter_case_sensitivity _________
+
+self = <backend.tests.test_api.TestRequestValidation object at 0x000001788CC9B7D0>
+
+    def test_query_parameter_case_sensitivity(self):
+        """Test that query parameters are case-sensitive."""
+        # Standard parameter
+        response1 = client.get("/users/at-risk?threshold=70")
+        assert response1.status_code == 200
+    
+        # Different case (might not be recognized as parameter)
+        response2 = client.get("/users/at-risk?Threshold=70")
+        # Should still work but threshold might not be applied
+>       assert response2.status_code in [200, 422]
+E       assert 500 in [200, 422]
+E        +  where 500 = <Response [500 Internal Server Error]>.status_code
+
+backend\tests\test_api.py:401: AssertionError
+---------------------------- Captured stderr call -----------------------------
+INFO:httpx:HTTP Request: GET http://testserver/users/at-risk?threshold=70 "HTTP/1.1 200 OK"
+ERROR:sqlalchemy.pool.impl.AsyncAdaptedQueuePool:Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x000001788D4D9300>>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 617, in close
+  File "asyncpg/protocol/protocol.pyx", line 650, in asyncpg.protocol.protocol.BaseProtocol._request_cancel
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 1682, in _cancel_current_command
+    self._cancellations.add(self._loop.create_task(self._cancel(waiter)))
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 435, in create_task
+    self._check_closed()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR:backend.app.routers.users:Error fetching at-risk users: 'NoneType' object has no attribute 'send'
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 762, in call_soon
+    self._check_closed()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\user-retention-risk\backend\app\routers\users.py", line 190, in get_at_risk_users
+    result = await db.execute(stmt)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 449, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 201, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2239, in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2108, in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 2, in _connection_for_bind
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 1187, in _connection_for_bind
+    conn = bind.connect()
+           ^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 3293, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 143, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 3317, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 1371, in _checkout
+    with util.safe_reraise():
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 121, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 1309, in _checkout
+    result = pool._dialect._do_ping_w_event(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\default.py", line 729, in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1160, in do_ping
+    dbapi_connection.ping()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 818, in ping
+    self._handle_exception(error)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 799, in _handle_exception
+    raise error
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 816, in ping
+    _ = self.await_(self._async_ping())
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 825, in _async_ping
+    await tr.start()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\transaction.py", line 146, in start
+    await self._connection.execute(query)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 354, in execute
+    result = await self._protocol.query(query, timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg/protocol/protocol.pyx", line 369, in query
+  File "asyncpg/protocol/protocol.pyx", line 362, in asyncpg.protocol.protocol.BaseProtocol.query
+  File "asyncpg/protocol/coreproto.pyx", line 1174, in asyncpg.protocol.protocol.CoreProtocol._simple_query
+  File "asyncpg/protocol/protocol.pyx", line 956, in asyncpg.protocol.protocol.BaseProtocol._write
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\proactor_events.py", line 365, in write
+    self._loop_writing(data=bytes(data))
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\proactor_events.py", line 401, in _loop_writing
+    self._write_fut = self._loop._proactor.send(self._sock, data)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'send'
+INFO:httpx:HTTP Request: GET http://testserver/users/at-risk?Threshold=70 "HTTP/1.1 500 Internal Server Error"
+------------------------------ Captured log call ------------------------------
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/users/at-risk?threshold=70 "HTTP/1.1 200 OK"
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:377 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x000001788D4D9300>>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1127, in do_terminate
+    dbapi_connection.terminate()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 617, in close
+  File "asyncpg/protocol/protocol.pyx", line 650, in asyncpg.protocol.protocol.BaseProtocol._request_cancel
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 1682, in _cancel_current_command
+    self._cancellations.add(self._loop.create_task(self._cancel(waiter)))
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 435, in create_task
+    self._check_closed()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+ERROR    backend.app.routers.users:users.py:207 Error fetching at-risk users: 'NoneType' object has no attribute 'send'
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 762, in call_soon
+    self._check_closed()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 520, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\user-retention-risk\backend\app\routers\users.py", line 190, in get_at_risk_users
+    result = await db.execute(stmt)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 449, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 201, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2239, in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 2108, in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 2, in _connection_for_bind
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\orm\session.py", line 1187, in _connection_for_bind
+    conn = bind.connect()
+           ^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 3293, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 143, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\base.py", line 3317, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 1371, in _checkout
+    with util.safe_reraise():
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 121, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\pool\base.py", line 1309, in _checkout
+    result = pool._dialect._do_ping_w_event(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\engine\default.py", line 729, in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 1160, in do_ping
+    dbapi_connection.ping()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 818, in ping
+    self._handle_exception(error)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 799, in _handle_exception
+    raise error
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 816, in ping
+    _ = self.await_(self._async_ping())
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 825, in _async_ping
+    await tr.start()
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\transaction.py", line 146, in start
+    await self._connection.execute(query)
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\asyncpg\connection.py", line 354, in execute
+    result = await self._protocol.query(query, timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg/protocol/protocol.pyx", line 369, in query
+  File "asyncpg/protocol/protocol.pyx", line 362, in asyncpg.protocol.protocol.BaseProtocol.query
+  File "asyncpg/protocol/coreproto.pyx", line 1174, in asyncpg.protocol.protocol.CoreProtocol._simple_query
+  File "asyncpg/protocol/protocol.pyx", line 956, in asyncpg.protocol.protocol.BaseProtocol._write
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\proactor_events.py", line 365, in write
+    self._loop_writing(data=bytes(data))
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\proactor_events.py", line 401, in _loop_writing
+    self._write_fut = self._loop._proactor.send(self._sock, data)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'send'
+INFO     httpx:_client.py:1025 HTTP Request: GET http://testserver/users/at-risk?Threshold=70 "HTTP/1.1 500 Internal Server Error"
+_____________________ TestAsyncEngine.test_engine_created _____________________
+
+self = <backend.tests.test_db.TestAsyncEngine object at 0x000001788CCA77D0>
+
+    def test_engine_created(self):
+        """Test that async engine is created."""
+        from backend.app.db.session import engine
+    
+        assert engine is not None
+        assert hasattr(engine, "connect")
+>       assert hasattr(engine, "execute")
+E       AssertionError: assert False
+E        +  where False = hasattr(<sqlalchemy.ext.asyncio.engine.AsyncEngine object at 0x00000178E6AC6F40>, 'execute')
+
+backend\tests\test_db.py:93: AssertionError
+_____________ TestEngineConfiguration.test_engine_has_pool_config _____________
+
+self = <backend.tests.test_db.TestEngineConfiguration object at 0x000001788CCB8050>
+
+    def test_engine_has_pool_config(self):
+        """Test that engine has pool configuration."""
+        from backend.app.db.session import engine
+    
+        # Engine should have pool options set
+>       assert engine.pool_pre_ping is not None
+               ^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'AsyncEngine' object has no attribute 'pool_pre_ping'
+
+backend\tests\test_db.py:155: AttributeError
+___________________________ test_feature_extraction ___________________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+____________________________ test_model_prediction ____________________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+________________________________ test_schemas _________________________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+______ TestExplainerSuccess.test_successful_explanation_with_shap_values ______
+
+self = <backend.tests.test_explainer.TestExplainerSuccess object at 0x000001788CCCE750>
+sample_user_context = {'days_since_last_login': 25, 'days_since_signup': 180, 'plan_type': 'pro'}
+sample_risk_inputs = {'risk_score': 78, 'shap_values': {'days_since_last_login': 0.45, 'session_count_30d': -0.12, 'support_tickets_open': 0.18}, 'top_drivers': ['days_since_last_login', 'session_count_30d', 'support_tickets_open']}
+
+    @pytest.mark.asyncio
+    async def test_successful_explanation_with_shap_values(self, sample_user_context, sample_risk_inputs):
+        """Test successful JSON response is parsed correctly."""
+        expected_response = {
+            "reason": "User hasn't logged in for 25 days and engagement is dropping.",
+            "action": "Schedule a check-in call and offer a pro feature walkthrough.",
+        }
+    
+        with patch("anthropic.Anthropic") as mock_anthropic:
+            # Mock the API response
+            mock_client = MagicMock()
+            mock_message = MagicMock()
+            mock_message.content = [MagicMock(text=json.dumps(expected_response))]
+            mock_client.messages.create.return_value = mock_message
+            mock_anthropic.return_value = mock_client
+    
+            with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key-123"}):
+                result = await explain_risk(
+                    user_context=sample_user_context,
+                    risk_score=sample_risk_inputs["risk_score"],
+                    top_drivers=sample_risk_inputs["top_drivers"],
+                    shap_values=sample_risk_inputs["shap_values"],
+                )
+    
+            assert isinstance(result, RiskExplanation)
+>           assert result.reason == expected_response["reason"]
+E           assert 'Unable to analyze.' == "User hasn't ... is dropping."
+E             
+E             - User hasn't logged in for 25 days and engagement is dropping.
+E             + Unable to analyze.
+
+backend\tests\test_explainer.py:62: AssertionError
+---------------------------- Captured stderr call -----------------------------
+ERROR:backend.app.ml.explainer:Unexpected error in explain_risk: AsyncClient.__init__() got an unexpected keyword argument 'proxies'
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-559' coro=<AsyncClient.aclose() done, defined at C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py:1978> exception=AttributeError("'AsyncHttpxClientWrapper' object has no attribute '_state'")>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py", line 1982, in aclose
+    if self._state != ClientState.CLOSED:
+       ^^^^^^^^^^^
+AttributeError: 'AsyncHttpxClientWrapper' object has no attribute '_state'
+------------------------------ Captured log call ------------------------------
+ERROR    backend.app.ml.explainer:explainer.py:130 Unexpected error in explain_risk: AsyncClient.__init__() got an unexpected keyword argument 'proxies'
+ERROR    asyncio:base_events.py:1785 Task exception was never retrieved
+future: <Task finished name='Task-559' coro=<AsyncClient.aclose() done, defined at C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py:1978> exception=AttributeError("'AsyncHttpxClientWrapper' object has no attribute '_state'")>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py", line 1982, in aclose
+    if self._state != ClientState.CLOSED:
+       ^^^^^^^^^^^
+AttributeError: 'AsyncHttpxClientWrapper' object has no attribute '_state'
+____ TestExplainerSuccess.test_successful_explanation_without_shap_values _____
+
+self = <backend.tests.test_explainer.TestExplainerSuccess object at 0x000001788CCCEF90>
+sample_user_context = {'days_since_last_login': 25, 'days_since_signup': 180, 'plan_type': 'pro'}
+sample_risk_inputs = {'risk_score': 78, 'shap_values': {'days_since_last_login': 0.45, 'session_count_30d': -0.12, 'support_tickets_open': 0.18}, 'top_drivers': ['days_since_last_login', 'session_count_30d', 'support_tickets_open']}
+
+    @pytest.mark.asyncio
+    async def test_successful_explanation_without_shap_values(self, sample_user_context, sample_risk_inputs):
+        """Test successful response when SHAP values are not available."""
+        expected_response = {
+            "reason": "Low engagement over the past month indicates reduced platform interest.",
+            "action": "Send re-engagement email with new feature highlights.",
+        }
+    
+        with patch("anthropic.Anthropic") as mock_anthropic:
+            mock_client = MagicMock()
+            mock_message = MagicMock()
+            mock_message.content = [MagicMock(text=json.dumps(expected_response))]
+            mock_client.messages.create.return_value = mock_message
+            mock_anthropic.return_value = mock_client
+    
+            with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key-456"}):
+                result = await explain_risk(
+                    user_context=sample_user_context,
+                    risk_score=sample_risk_inputs["risk_score"],
+                    top_drivers=sample_risk_inputs["top_drivers"],
+                    shap_values=None,
+                )
+    
+            assert isinstance(result, RiskExplanation)
+>           assert result.reason == expected_response["reason"]
+E           AssertionError: assert 'Unable to analyze.' == 'Low engageme...orm interest.'
+E             
+E             - Low engagement over the past month indicates reduced platform interest.
+E             + Unable to analyze.
+
+backend\tests\test_explainer.py:96: AssertionError
+---------------------------- Captured stderr call -----------------------------
+ERROR:backend.app.ml.explainer:Unexpected error in explain_risk: AsyncClient.__init__() got an unexpected keyword argument 'proxies'
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-563' coro=<AsyncClient.aclose() done, defined at C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py:1978> exception=AttributeError("'AsyncHttpxClientWrapper' object has no attribute '_state'")>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py", line 1982, in aclose
+    if self._state != ClientState.CLOSED:
+       ^^^^^^^^^^^
+AttributeError: 'AsyncHttpxClientWrapper' object has no attribute '_state'
+------------------------------ Captured log call ------------------------------
+ERROR    backend.app.ml.explainer:explainer.py:130 Unexpected error in explain_risk: AsyncClient.__init__() got an unexpected keyword argument 'proxies'
+ERROR    asyncio:base_events.py:1785 Task exception was never retrieved
+future: <Task finished name='Task-563' coro=<AsyncClient.aclose() done, defined at C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py:1978> exception=AttributeError("'AsyncHttpxClientWrapper' object has no attribute '_state'")>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py", line 1982, in aclose
+    if self._state != ClientState.CLOSED:
+       ^^^^^^^^^^^
+AttributeError: 'AsyncHttpxClientWrapper' object has no attribute '_state'
+___________ TestExplainerSuccess.test_prompt_contains_user_context ____________
+
+self = <backend.tests.test_explainer.TestExplainerSuccess object at 0x000001788CCCF090>
+sample_user_context = {'days_since_last_login': 25, 'days_since_signup': 180, 'plan_type': 'pro'}
+sample_risk_inputs = {'risk_score': 78, 'shap_values': {'days_since_last_login': 0.45, 'session_count_30d': -0.12, 'support_tickets_open': 0.18}, 'top_drivers': ['days_since_last_login', 'session_count_30d', 'support_tickets_open']}
+
+    @pytest.mark.asyncio
+    async def test_prompt_contains_user_context(self, sample_user_context, sample_risk_inputs):
+        """Test that the prompt is correctly constructed with user context."""
+        with patch("anthropic.Anthropic") as mock_anthropic:
+            mock_client = MagicMock()
+            mock_message = MagicMock()
+            mock_message.content = [MagicMock(text=json.dumps({
+                "reason": "Test reason.",
+                "action": "Test action.",
+            }))]
+            mock_client.messages.create.return_value = mock_message
+            mock_anthropic.return_value = mock_client
+    
+            with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+                await explain_risk(
+                    user_context=sample_user_context,
+                    risk_score=sample_risk_inputs["risk_score"],
+                    top_drivers=sample_risk_inputs["top_drivers"],
+                    shap_values=sample_risk_inputs["shap_values"],
+                )
+    
+            # Extract the prompt from the call
+            call_args = mock_client.messages.create.call_args
+>           messages = call_args.kwargs["messages"]
+                       ^^^^^^^^^^^^^^^^
+E           AttributeError: 'NoneType' object has no attribute 'kwargs'
+
+backend\tests\test_explainer.py:122: AttributeError
+---------------------------- Captured stderr call -----------------------------
+ERROR:backend.app.ml.explainer:Unexpected error in explain_risk: AsyncClient.__init__() got an unexpected keyword argument 'proxies'
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-567' coro=<AsyncClient.aclose() done, defined at C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py:1978> exception=AttributeError("'AsyncHttpxClientWrapper' object has no attribute '_state'")>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py", line 1982, in aclose
+    if self._state != ClientState.CLOSED:
+       ^^^^^^^^^^^
+AttributeError: 'AsyncHttpxClientWrapper' object has no attribute '_state'
+------------------------------ Captured log call ------------------------------
+ERROR    backend.app.ml.explainer:explainer.py:130 Unexpected error in explain_risk: AsyncClient.__init__() got an unexpected keyword argument 'proxies'
+ERROR    asyncio:base_events.py:1785 Task exception was never retrieved
+future: <Task finished name='Task-567' coro=<AsyncClient.aclose() done, defined at C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py:1978> exception=AttributeError("'AsyncHttpxClientWrapper' object has no attribute '_state'")>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py", line 1982, in aclose
+    if self._state != ClientState.CLOSED:
+       ^^^^^^^^^^^
+AttributeError: 'AsyncHttpxClientWrapper' object has no attribute '_state'
+__________ TestExplainerMissingAPIKey.test_api_key_from_environment ___________
+
+self = <backend.tests.test_explainer.TestExplainerMissingAPIKey object at 0x000001788CCDC090>
+sample_user_context = {'days_since_last_login': 25, 'days_since_signup': 180, 'plan_type': 'pro'}
+sample_risk_inputs = {'risk_score': 78, 'shap_values': {'days_since_last_login': 0.45, 'session_count_30d': -0.12, 'support_tickets_open': 0.18}, 'top_drivers': ['days_since_last_login', 'session_count_30d', 'support_tickets_open']}
+
+    @pytest.mark.asyncio
+    async def test_api_key_from_environment(self, sample_user_context, sample_risk_inputs):
+        """Test that API key is correctly read from environment."""
+        expected_response = {
+            "reason": "Test reason.",
+            "action": "Test action.",
+        }
+    
+        with patch("anthropic.Anthropic") as mock_anthropic:
+            mock_client = MagicMock()
+            mock_message = MagicMock()
+            mock_message.content = [MagicMock(text=json.dumps(expected_response))]
+            mock_client.messages.create.return_value = mock_message
+            mock_anthropic.return_value = mock_client
+    
+            custom_key = "sk-test-custom-key-12345"
+            with patch.dict(os.environ, {"ANTHROPIC_API_KEY": custom_key}):
+                result = await explain_risk(
+                    user_context=sample_user_context,
+                    risk_score=sample_risk_inputs["risk_score"],
+                    top_drivers=sample_risk_inputs["top_drivers"],
+                    shap_values=sample_risk_inputs["shap_values"],
+                )
+    
+>               assert result.reason == expected_response["reason"]
+E               AssertionError: assert 'Unable to analyze.' == 'Test reason.'
+E                 
+E                 - Test reason.
+E                 + Unable to analyze.
+
+backend\tests\test_explainer.py:368: AssertionError
+---------------------------- Captured stderr call -----------------------------
+ERROR:backend.app.ml.explainer:Unexpected error in explain_risk: AsyncClient.__init__() got an unexpected keyword argument 'proxies'
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-606' coro=<AsyncClient.aclose() done, defined at C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py:1978> exception=AttributeError("'AsyncHttpxClientWrapper' object has no attribute '_state'")>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py", line 1982, in aclose
+    if self._state != ClientState.CLOSED:
+       ^^^^^^^^^^^
+AttributeError: 'AsyncHttpxClientWrapper' object has no attribute '_state'
+------------------------------ Captured log call ------------------------------
+ERROR    backend.app.ml.explainer:explainer.py:130 Unexpected error in explain_risk: AsyncClient.__init__() got an unexpected keyword argument 'proxies'
+ERROR    asyncio:base_events.py:1785 Task exception was never retrieved
+future: <Task finished name='Task-606' coro=<AsyncClient.aclose() done, defined at C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py:1978> exception=AttributeError("'AsyncHttpxClientWrapper' object has no attribute '_state'")>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py", line 1982, in aclose
+    if self._state != ClientState.CLOSED:
+       ^^^^^^^^^^^
+AttributeError: 'AsyncHttpxClientWrapper' object has no attribute '_state'
+________________ TestExplainerEdgeCases.test_empty_top_drivers ________________
+
+self = <backend.tests.test_explainer.TestExplainerEdgeCases object at 0x000001788CCD3C10>
+sample_user_context = {'days_since_last_login': 25, 'days_since_signup': 180, 'plan_type': 'pro'}
+
+    @pytest.mark.asyncio
+    async def test_empty_top_drivers(self, sample_user_context):
+        """Test with empty top_drivers list."""
+        expected_response = {
+            "reason": "User engagement is declining.",
+            "action": "Reach out proactively.",
+        }
+    
+        with patch("anthropic.Anthropic") as mock_anthropic:
+            mock_client = MagicMock()
+            mock_message = MagicMock()
+            mock_message.content = [MagicMock(text=json.dumps(expected_response))]
+            mock_client.messages.create.return_value = mock_message
+            mock_anthropic.return_value = mock_client
+    
+            with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+                result = await explain_risk(
+                    user_context=sample_user_context,
+                    risk_score=75,
+                    top_drivers=[],
+                    shap_values={},
+                )
+    
+            assert isinstance(result, RiskExplanation)
+>           assert result.reason == expected_response["reason"]
+E           AssertionError: assert 'Unable to analyze.' == 'User engagem...is declining.'
+E             
+E             - User engagement is declining.
+E             + Unable to analyze.
+
+backend\tests\test_explainer.py:427: AssertionError
+---------------------------- Captured stderr call -----------------------------
+ERROR:backend.app.ml.explainer:Unexpected error in explain_risk: AsyncClient.__init__() got an unexpected keyword argument 'proxies'
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-610' coro=<AsyncClient.aclose() done, defined at C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py:1978> exception=AttributeError("'AsyncHttpxClientWrapper' object has no attribute '_state'")>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py", line 1982, in aclose
+    if self._state != ClientState.CLOSED:
+       ^^^^^^^^^^^
+AttributeError: 'AsyncHttpxClientWrapper' object has no attribute '_state'
+------------------------------ Captured log call ------------------------------
+ERROR    backend.app.ml.explainer:explainer.py:130 Unexpected error in explain_risk: AsyncClient.__init__() got an unexpected keyword argument 'proxies'
+ERROR    asyncio:base_events.py:1785 Task exception was never retrieved
+future: <Task finished name='Task-610' coro=<AsyncClient.aclose() done, defined at C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py:1978> exception=AttributeError("'AsyncHttpxClientWrapper' object has no attribute '_state'")>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py", line 1982, in aclose
+    if self._state != ClientState.CLOSED:
+       ^^^^^^^^^^^
+AttributeError: 'AsyncHttpxClientWrapper' object has no attribute '_state'
+________________ TestExplainerEdgeCases.test_single_top_driver ________________
+
+self = <backend.tests.test_explainer.TestExplainerEdgeCases object at 0x000001788CCD3350>
+sample_user_context = {'days_since_last_login': 25, 'days_since_signup': 180, 'plan_type': 'pro'}
+
+    @pytest.mark.asyncio
+    async def test_single_top_driver(self, sample_user_context):
+        """Test with only one top driver."""
+        expected_response = {
+            "reason": "Primary engagement metric is weak.",
+            "action": "Monitor closely.",
+        }
+    
+        with patch("anthropic.Anthropic") as mock_anthropic:
+            mock_client = MagicMock()
+            mock_message = MagicMock()
+            mock_message.content = [MagicMock(text=json.dumps(expected_response))]
+            mock_client.messages.create.return_value = mock_message
+            mock_anthropic.return_value = mock_client
+    
+            with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+                result = await explain_risk(
+                    user_context=sample_user_context,
+                    risk_score=55,
+                    top_drivers=["session_count_30d"],
+                    shap_values={"session_count_30d": -0.25},
+                )
+    
+            assert isinstance(result, RiskExplanation)
+>           assert result.reason == expected_response["reason"]
+E           AssertionError: assert 'Unable to analyze.' == 'Primary enga...tric is weak.'
+E             
+E             - Primary engagement metric is weak.
+E             + Unable to analyze.
+
+backend\tests\test_explainer.py:454: AssertionError
+---------------------------- Captured stderr call -----------------------------
+ERROR:backend.app.ml.explainer:Unexpected error in explain_risk: AsyncClient.__init__() got an unexpected keyword argument 'proxies'
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-614' coro=<AsyncClient.aclose() done, defined at C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py:1978> exception=AttributeError("'AsyncHttpxClientWrapper' object has no attribute '_state'")>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py", line 1982, in aclose
+    if self._state != ClientState.CLOSED:
+       ^^^^^^^^^^^
+AttributeError: 'AsyncHttpxClientWrapper' object has no attribute '_state'
+------------------------------ Captured log call ------------------------------
+ERROR    backend.app.ml.explainer:explainer.py:130 Unexpected error in explain_risk: AsyncClient.__init__() got an unexpected keyword argument 'proxies'
+ERROR    asyncio:base_events.py:1785 Task exception was never retrieved
+future: <Task finished name='Task-614' coro=<AsyncClient.aclose() done, defined at C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py:1978> exception=AttributeError("'AsyncHttpxClientWrapper' object has no attribute '_state'")>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py", line 1982, in aclose
+    if self._state != ClientState.CLOSED:
+       ^^^^^^^^^^^
+AttributeError: 'AsyncHttpxClientWrapper' object has no attribute '_state'
+______________ TestExplainerEdgeCases.test_risk_score_boundaries ______________
+
+self = <backend.tests.test_explainer.TestExplainerEdgeCases object at 0x000001788CCD2510>
+sample_user_context = {'days_since_last_login': 25, 'days_since_signup': 180, 'plan_type': 'pro'}
+
+    @pytest.mark.asyncio
+    async def test_risk_score_boundaries(self, sample_user_context):
+        """Test with boundary risk scores (0 and 100)."""
+        expected_response = {
+            "reason": "High churn risk detected.",
+            "action": "Urgent intervention needed.",
+        }
+    
+        with patch("anthropic.Anthropic") as mock_anthropic:
+            mock_client = MagicMock()
+            mock_message = MagicMock()
+            mock_message.content = [MagicMock(text=json.dumps(expected_response))]
+            mock_client.messages.create.return_value = mock_message
+            mock_anthropic.return_value = mock_client
+    
+            with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+                # Test with risk_score = 100
+                result_high = await explain_risk(
+                    user_context=sample_user_context,
+                    risk_score=100,
+                    top_drivers=["days_since_last_login"],
+                    shap_values={},
+                )
+    
+>               assert result_high.reason == expected_response["reason"]
+E               AssertionError: assert 'Unable to analyze.' == 'High churn risk detected.'
+E                 
+E                 - High churn risk detected.
+E                 + Unable to analyze.
+
+backend\tests\test_explainer.py:480: AssertionError
+---------------------------- Captured stderr call -----------------------------
+ERROR:backend.app.ml.explainer:Unexpected error in explain_risk: AsyncClient.__init__() got an unexpected keyword argument 'proxies'
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-618' coro=<AsyncClient.aclose() done, defined at C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py:1978> exception=AttributeError("'AsyncHttpxClientWrapper' object has no attribute '_state'")>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py", line 1982, in aclose
+    if self._state != ClientState.CLOSED:
+       ^^^^^^^^^^^
+AttributeError: 'AsyncHttpxClientWrapper' object has no attribute '_state'
+------------------------------ Captured log call ------------------------------
+ERROR    backend.app.ml.explainer:explainer.py:130 Unexpected error in explain_risk: AsyncClient.__init__() got an unexpected keyword argument 'proxies'
+ERROR    asyncio:base_events.py:1785 Task exception was never retrieved
+future: <Task finished name='Task-618' coro=<AsyncClient.aclose() done, defined at C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py:1978> exception=AttributeError("'AsyncHttpxClientWrapper' object has no attribute '_state'")>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py", line 1982, in aclose
+    if self._state != ClientState.CLOSED:
+       ^^^^^^^^^^^
+AttributeError: 'AsyncHttpxClientWrapper' object has no attribute '_state'
+___________ TestExplainerEdgeCases.test_missing_user_context_fields ___________
+
+self = <backend.tests.test_explainer.TestExplainerEdgeCases object at 0x000001788CCD1790>
+
+    @pytest.mark.asyncio
+    async def test_missing_user_context_fields(self):
+        """Test with incomplete user context."""
+        incomplete_context = {
+            "plan_type": "free",
+            # Missing days_since_signup and days_since_last_login
+        }
+    
+        expected_response = {
+            "reason": "Limited plan with low engagement.",
+            "action": "Suggest plan upgrade.",
+        }
+    
+        with patch("anthropic.Anthropic") as mock_anthropic:
+            mock_client = MagicMock()
+            mock_message = MagicMock()
+            mock_message.content = [MagicMock(text=json.dumps(expected_response))]
+            mock_client.messages.create.return_value = mock_message
+            mock_anthropic.return_value = mock_client
+    
+            with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+                result = await explain_risk(
+                    user_context=incomplete_context,
+                    risk_score=65,
+                    top_drivers=["plan_type_encoded"],
+                    shap_values={},
+                )
+    
+            assert isinstance(result, RiskExplanation)
+            # Should use defaults (0) for missing fields
+            call_args = mock_anthropic.return_value.messages.create.call_args
+>           messages = call_args.kwargs["messages"]
+                       ^^^^^^^^^^^^^^^^
+E           AttributeError: 'NoneType' object has no attribute 'kwargs'
+
+backend\tests\test_explainer.py:523: AttributeError
+---------------------------- Captured stderr call -----------------------------
+ERROR:backend.app.ml.explainer:Unexpected error in explain_risk: AsyncClient.__init__() got an unexpected keyword argument 'proxies'
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-622' coro=<AsyncClient.aclose() done, defined at C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py:1978> exception=AttributeError("'AsyncHttpxClientWrapper' object has no attribute '_state'")>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py", line 1982, in aclose
+    if self._state != ClientState.CLOSED:
+       ^^^^^^^^^^^
+AttributeError: 'AsyncHttpxClientWrapper' object has no attribute '_state'
+------------------------------ Captured log call ------------------------------
+ERROR    backend.app.ml.explainer:explainer.py:130 Unexpected error in explain_risk: AsyncClient.__init__() got an unexpected keyword argument 'proxies'
+ERROR    asyncio:base_events.py:1785 Task exception was never retrieved
+future: <Task finished name='Task-622' coro=<AsyncClient.aclose() done, defined at C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py:1978> exception=AttributeError("'AsyncHttpxClientWrapper' object has no attribute '_state'")>
+Traceback (most recent call last):
+  File "C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\httpx\_client.py", line 1982, in aclose
+    if self._state != ClientState.CLOSED:
+       ^^^^^^^^^^^
+AttributeError: 'AsyncHttpxClientWrapper' object has no attribute '_state'
+============================== warnings summary ===============================
+backend\app\main.py:16
+  c:\user-retention-risk\backend\app\main.py:16: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("startup")
+
+..\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\fastapi\applications.py:4656
+  C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\site-packages\fastapi\applications.py:4656: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    return self.router.on_event(event_type)  # ty: ignore[deprecated]
+
+backend/tests/test_api.py::TestGetCohortRetentionEndpoint::test_cohort_retention_returns_ok
+backend/tests/test_api.py::TestGetCohortRetentionEndpoint::test_cohort_retention_response_types
+backend/tests/test_api.py::TestGetCohortRetentionEndpoint::test_cohort_retention_retention_values_valid
+  C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\json\decoder.py:353: RuntimeWarning: coroutine 'Connection._cancel' was never awaited
+    obj, end = self.scan_once(s, idx)
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+backend/tests/test_routers.py::TestGetUserRiskById::test_get_user_risk_endpoint_returns_response
+  C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\weakref.py:369: SAWarning: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <aiosqlite.core.Connection object at 0x00000178988145D0>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+    def remove(k, selfref=ref(self)):
+
+backend/tests/test_routers.py::TestGetUserRiskById::test_get_user_risk_endpoint_returns_response
+  C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\weakref.py:369: SAWarning: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <aiosqlite.core.Connection object at 0x0000017890280F10>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+    def remove(k, selfref=ref(self)):
+
+backend/tests/test_routers.py::TestGetUserRiskById::test_get_user_risk_endpoint_returns_response
+  C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\weakref.py:369: SAWarning: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <aiosqlite.core.Connection object at 0x0000017898D18410>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+    def remove(k, selfref=ref(self)):
+
+backend/tests/test_routers.py::TestGetUserRiskById::test_get_user_risk_endpoint_returns_response
+  C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\weakref.py:369: SAWarning: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <aiosqlite.core.Connection object at 0x0000017898D03A10>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+    def remove(k, selfref=ref(self)):
+
+backend/tests/test_routers.py::TestGetUserRiskById::test_get_user_risk_endpoint_returns_response
+  C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\weakref.py:369: SAWarning: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <aiosqlite.core.Connection object at 0x0000017898CC0B90>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+    def remove(k, selfref=ref(self)):
+
+backend/tests/test_routers.py::TestPostUserRiskFeedback::test_post_user_risk_feedback_unknown_user_returns_404
+  C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\windows_events.py:442: SAWarning: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <aiosqlite.core.Connection object at 0x000001789883FC50>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+    def select(self, timeout=None):
+
+backend/tests/test_routers.py::TestPostUserRiskFeedback::test_post_user_risk_feedback_unknown_user_returns_404
+  C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\windows_events.py:442: SAWarning: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <aiosqlite.core.Connection object at 0x000001789883DFD0>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+    def select(self, timeout=None):
+
+backend/tests/test_routers.py::TestPostUserRiskFeedback::test_post_user_risk_feedback_unknown_user_returns_404
+  C:\Users\amitc\AppData\Local\Programs\Python\Python311\Lib\asyncio\windows_events.py:442: SAWarning: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <aiosqlite.core.Connection object at 0x00000178945917D0>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+    def select(self, timeout=None):
+
+backend/tests/test_routers.py::TestGetCohortsRetentionStructure::test_get_cohorts_retention_cohort_labels
+  sys:1: SAWarning: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <aiosqlite.core.Connection object at 0x000001788D503DD0>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+
+backend/tests/test_routers.py::TestGetCohortsRetentionStructure::test_get_cohorts_retention_cohort_labels
+  sys:1: SAWarning: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <aiosqlite.core.Connection object at 0x000001788D4E0AD0>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+
+backend/tests/test_routers.py::TestGetCohortsRetentionStructure::test_get_cohorts_retention_cohort_labels
+  sys:1: SAWarning: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <aiosqlite.core.Connection object at 0x0000017897FF0FD0>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+
+backend/tests/test_routers.py::TestGetCohortsRetentionStructure::test_get_cohorts_retention_cohort_labels
+  sys:1: SAWarning: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <aiosqlite.core.Connection object at 0x00000178928F9310>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+
+backend/tests/test_routers.py::TestGetCohortsRetentionStructure::test_get_cohorts_retention_cohort_labels
+  sys:1: SAWarning: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <aiosqlite.core.Connection object at 0x0000017891E23AD0>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=============================== tests coverage ================================
+_______________ coverage: platform win32, python 3.11.9-final-0 _______________
+
+Name                              Stmts   Miss  Cover   Missing
+---------------------------------------------------------------
+backend\app\__init__.py               0      0   100%
+backend\app\db\__init__.py            3      0   100%
+backend\app\db\models.py             48      3    94%   48, 86, 124
+backend\app\db\session.py            18      4    78%   47-48, 53-54
+backend\app\main.py                  15      3    80%   18-20
+backend\app\ml\explainer.py          52     15    71%   90-118, 124-125
+backend\app\ml\features.py           27      0   100%
+backend\app\ml\model.py              53      3    94%   36-38, 112
+backend\app\routers\__init__.py       0      0   100%
+backend\app\routers\cohorts.py       60     35    42%   66-99, 101-107, 113-135, 140
+backend\app\routers\health.py         5      0   100%
+backend\app\routers\users.py         87     36    59%   69-80, 94-146, 151-152, 191, 204, 253-266, 273-275
+backend\app\schemas\risk.py          21      0   100%
+---------------------------------------------------------------
+TOTAL                               389     99    75%
+=========================== short test summary info ===========================
+FAILED backend/tests/test_api.py::TestGetUserRiskEndpoint::test_get_user_risk_invalid_uuid_returns_422
+FAILED backend/tests/test_api.py::TestPostRiskFeedbackEndpoint::test_risk_feedback_nonexistent_user_returns_404
+FAILED backend/tests/test_api.py::TestPostRiskFeedbackEndpoint::test_risk_feedback_various_actions
+FAILED backend/tests/test_api.py::TestEndpointIntegration::test_cohort_retention_endpoint_always_available
+FAILED backend/tests/test_api.py::TestResponseValidation::test_cohort_retention_matrix_alignment
+FAILED backend/tests/test_api.py::TestConcurrency::test_mixed_endpoints_calls
+FAILED backend/tests/test_api.py::TestRequestValidation::test_query_parameter_case_sensitivity
+FAILED backend/tests/test_db.py::TestAsyncEngine::test_engine_created - Asser...
+FAILED backend/tests/test_db.py::TestEngineConfiguration::test_engine_has_pool_config
+FAILED backend/tests/test_endpoints.py::test_feature_extraction - Failed: asy...
+FAILED backend/tests/test_endpoints.py::test_model_prediction - Failed: async...
+FAILED backend/tests/test_endpoints.py::test_schemas - Failed: async def func...
+FAILED backend/tests/test_explainer.py::TestExplainerSuccess::test_successful_explanation_with_shap_values
+FAILED backend/tests/test_explainer.py::TestExplainerSuccess::test_successful_explanation_without_shap_values
+FAILED backend/tests/test_explainer.py::TestExplainerSuccess::test_prompt_contains_user_context
+FAILED backend/tests/test_explainer.py::TestExplainerMissingAPIKey::test_api_key_from_environment
+FAILED backend/tests/test_explainer.py::TestExplainerEdgeCases::test_empty_top_drivers
+FAILED backend/tests/test_explainer.py::TestExplainerEdgeCases::test_single_top_driver
+FAILED backend/tests/test_explainer.py::TestExplainerEdgeCases::test_risk_score_boundaries
+FAILED backend/tests/test_explainer.py::TestExplainerEdgeCases::test_missing_user_context_fields
+========== 20 failed, 131 passed, 18 warnings in 1634.77s (0:27:14) ===========

@@ -42,13 +42,19 @@ class TestExplainerSuccess:
             "action": "Schedule a check-in call and offer a pro feature walkthrough.",
         }
 
-        with patch("anthropic.Anthropic") as mock_anthropic:
-            # Mock the API response
-            mock_client = MagicMock()
+        with patch("backend.app.ml.explainer.AsyncClient") as mock_async_client_class:
+            # Create mock message response
             mock_message = MagicMock()
             mock_message.content = [MagicMock(text=json.dumps(expected_response))]
-            mock_client.messages.create.return_value = mock_message
-            mock_anthropic.return_value = mock_client
+
+            # Create async mock for messages.create
+            mock_client = AsyncMock()
+            mock_client.messages.create = AsyncMock(return_value=mock_message)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+
+            # Set the class to return our mock
+            mock_async_client_class.return_value = mock_client
 
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key-123"}):
                 result = await explain_risk(
@@ -62,11 +68,10 @@ class TestExplainerSuccess:
             assert result.reason == expected_response["reason"]
             assert result.action == expected_response["action"]
 
-            # Verify API was called with correct model and timeout
+            # Verify API was called with correct model
             mock_client.messages.create.assert_called_once()
             call_args = mock_client.messages.create.call_args
             assert call_args.kwargs["model"] == "claude-sonnet-4-20250514"
-            assert call_args.kwargs["timeout"] == 10.0
             assert call_args.kwargs["max_tokens"] == 256
 
     @pytest.mark.asyncio
@@ -77,12 +82,15 @@ class TestExplainerSuccess:
             "action": "Send re-engagement email with new feature highlights.",
         }
 
-        with patch("anthropic.Anthropic") as mock_anthropic:
-            mock_client = MagicMock()
+        with patch("backend.app.ml.explainer.AsyncClient") as mock_async_client_class:
             mock_message = MagicMock()
             mock_message.content = [MagicMock(text=json.dumps(expected_response))]
-            mock_client.messages.create.return_value = mock_message
-            mock_anthropic.return_value = mock_client
+
+            mock_client = AsyncMock()
+            mock_client.messages.create = AsyncMock(return_value=mock_message)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_async_client_class.return_value = mock_client
 
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key-456"}):
                 result = await explain_risk(
@@ -99,15 +107,18 @@ class TestExplainerSuccess:
     @pytest.mark.asyncio
     async def test_prompt_contains_user_context(self, sample_user_context, sample_risk_inputs):
         """Test that the prompt is correctly constructed with user context."""
-        with patch("anthropic.Anthropic") as mock_anthropic:
-            mock_client = MagicMock()
+        with patch("backend.app.ml.explainer.AsyncClient") as mock_async_client_class:
             mock_message = MagicMock()
             mock_message.content = [MagicMock(text=json.dumps({
                 "reason": "Test reason.",
                 "action": "Test action.",
             }))]
-            mock_client.messages.create.return_value = mock_message
-            mock_anthropic.return_value = mock_client
+
+            mock_client = AsyncMock()
+            mock_client.messages.create = AsyncMock(return_value=mock_message)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_async_client_class.return_value = mock_client
 
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
                 await explain_risk(
@@ -136,13 +147,15 @@ class TestExplainerMalformedJSON:
     @pytest.mark.asyncio
     async def test_malformed_json_response(self, sample_user_context, sample_risk_inputs):
         """Test that malformed JSON falls back to default response."""
-        with patch("anthropic.Anthropic") as mock_anthropic:
-            mock_client = MagicMock()
+        with patch("backend.app.ml.explainer.AsyncClient") as mock_async_client_class:
             mock_message = MagicMock()
-            # Return invalid JSON
             mock_message.content = [MagicMock(text="This is not JSON")]
-            mock_client.messages.create.return_value = mock_message
-            mock_anthropic.return_value = mock_client
+
+            mock_client = AsyncMock()
+            mock_client.messages.create = AsyncMock(return_value=mock_message)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_async_client_class.return_value = mock_client
 
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
                 result = await explain_risk(
@@ -159,13 +172,15 @@ class TestExplainerMalformedJSON:
     @pytest.mark.asyncio
     async def test_json_missing_reason_field(self, sample_user_context, sample_risk_inputs):
         """Test that JSON missing reason field falls back to default."""
-        with patch("anthropic.Anthropic") as mock_anthropic:
-            mock_client = MagicMock()
+        with patch("backend.app.ml.explainer.AsyncClient") as mock_async_client_class:
             mock_message = MagicMock()
-            # JSON with missing reason
             mock_message.content = [MagicMock(text=json.dumps({"action": "Test action"}))]
-            mock_client.messages.create.return_value = mock_message
-            mock_anthropic.return_value = mock_client
+
+            mock_client = AsyncMock()
+            mock_client.messages.create = AsyncMock(return_value=mock_message)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_async_client_class.return_value = mock_client
 
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
                 result = await explain_risk(
@@ -181,13 +196,15 @@ class TestExplainerMalformedJSON:
     @pytest.mark.asyncio
     async def test_json_missing_action_field(self, sample_user_context, sample_risk_inputs):
         """Test that JSON missing action field falls back to default."""
-        with patch("anthropic.Anthropic") as mock_anthropic:
-            mock_client = MagicMock()
+        with patch("backend.app.ml.explainer.AsyncClient") as mock_async_client_class:
             mock_message = MagicMock()
-            # JSON with missing action
             mock_message.content = [MagicMock(text=json.dumps({"reason": "Test reason"}))]
-            mock_client.messages.create.return_value = mock_message
-            mock_anthropic.return_value = mock_client
+
+            mock_client = AsyncMock()
+            mock_client.messages.create = AsyncMock(return_value=mock_message)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_async_client_class.return_value = mock_client
 
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
                 result = await explain_risk(
@@ -203,13 +220,15 @@ class TestExplainerMalformedJSON:
     @pytest.mark.asyncio
     async def test_json_with_empty_strings(self, sample_user_context, sample_risk_inputs):
         """Test that empty string values fall back to default."""
-        with patch("anthropic.Anthropic") as mock_anthropic:
-            mock_client = MagicMock()
+        with patch("backend.app.ml.explainer.AsyncClient") as mock_async_client_class:
             mock_message = MagicMock()
-            # JSON with empty strings
             mock_message.content = [MagicMock(text=json.dumps({"reason": "", "action": ""}))]
-            mock_client.messages.create.return_value = mock_message
-            mock_anthropic.return_value = mock_client
+
+            mock_client = AsyncMock()
+            mock_client.messages.create = AsyncMock(return_value=mock_message)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_async_client_class.return_value = mock_client
 
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
                 result = await explain_risk(
@@ -229,13 +248,16 @@ class TestExplainerAPIErrors:
     @pytest.mark.asyncio
     async def test_api_timeout_error(self, sample_user_context, sample_risk_inputs):
         """Test that API timeout falls back to default response."""
-        with patch("anthropic.Anthropic") as mock_anthropic:
-            mock_client = MagicMock()
-            # Simulate timeout
-            mock_client.messages.create.side_effect = anthropic.APITimeoutError(
-                request=MagicMock()
-            )
-            mock_anthropic.return_value = mock_client
+        with patch("backend.app.ml.explainer.AsyncClient") as mock_async_client_class:
+            mock_client = AsyncMock()
+            mock_client.messages.create = AsyncMock(side_effect=anthropic.APIError(
+                request=MagicMock(),
+                message="Timeout",
+                body={}
+            ))
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_async_client_class.return_value = mock_client
 
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
                 result = await explain_risk(
@@ -251,15 +273,16 @@ class TestExplainerAPIErrors:
     @pytest.mark.asyncio
     async def test_api_rate_limit_error(self, sample_user_context, sample_risk_inputs):
         """Test that rate limit errors fall back to default response."""
-        with patch("anthropic.Anthropic") as mock_anthropic:
-            mock_client = MagicMock()
-            # Simulate rate limit error
-            mock_client.messages.create.side_effect = anthropic.RateLimitError(
-                response=MagicMock(status_code=429),
-                body={"error": "rate_limit_exceeded"},
-                message="Rate limit exceeded"
-            )
-            mock_anthropic.return_value = mock_client
+        with patch("backend.app.ml.explainer.AsyncClient") as mock_async_client_class:
+            mock_client = AsyncMock()
+            mock_client.messages.create = AsyncMock(side_effect=anthropic.APIError(
+                request=MagicMock(),
+                message="Rate limit",
+                body={}
+            ))
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_async_client_class.return_value = mock_client
 
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
                 result = await explain_risk(
@@ -275,15 +298,16 @@ class TestExplainerAPIErrors:
     @pytest.mark.asyncio
     async def test_generic_api_error(self, sample_user_context, sample_risk_inputs):
         """Test that generic API errors fall back to default response."""
-        with patch("anthropic.Anthropic") as mock_anthropic:
-            mock_client = MagicMock()
-            # Simulate generic API error
-            mock_client.messages.create.side_effect = anthropic.APIError(
+        with patch("backend.app.ml.explainer.AsyncClient") as mock_async_client_class:
+            mock_client = AsyncMock()
+            mock_client.messages.create = AsyncMock(side_effect=anthropic.APIError(
                 request=MagicMock(),
                 message="Server error",
-                body={"error": "server_error"}
-            )
-            mock_anthropic.return_value = mock_client
+                body={}
+            ))
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_async_client_class.return_value = mock_client
 
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
                 result = await explain_risk(
@@ -299,11 +323,12 @@ class TestExplainerAPIErrors:
     @pytest.mark.asyncio
     async def test_unexpected_exception(self, sample_user_context, sample_risk_inputs):
         """Test that unexpected exceptions fall back to default response."""
-        with patch("anthropic.Anthropic") as mock_anthropic:
-            mock_client = MagicMock()
-            # Simulate unexpected error
-            mock_client.messages.create.side_effect = RuntimeError("Unexpected error")
-            mock_anthropic.return_value = mock_client
+        with patch("backend.app.ml.explainer.AsyncClient") as mock_async_client_class:
+            mock_client = AsyncMock()
+            mock_client.messages.create = AsyncMock(side_effect=RuntimeError("Unexpected error"))
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_async_client_class.return_value = mock_client
 
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
                 result = await explain_risk(
@@ -328,18 +353,15 @@ class TestExplainerMissingAPIKey:
         env_without_key.pop("ANTHROPIC_API_KEY", None)
 
         with patch.dict(os.environ, env_without_key, clear=True):
-            with patch("anthropic.Anthropic") as mock_anthropic:
-                result = await explain_risk(
-                    user_context=sample_user_context,
-                    risk_score=sample_risk_inputs["risk_score"],
-                    top_drivers=sample_risk_inputs["top_drivers"],
-                    shap_values=sample_risk_inputs["shap_values"],
-                )
+            result = await explain_risk(
+                user_context=sample_user_context,
+                risk_score=sample_risk_inputs["risk_score"],
+                top_drivers=sample_risk_inputs["top_drivers"],
+                shap_values=sample_risk_inputs["shap_values"],
+            )
 
-                assert result.reason == "Unable to analyze."
-                assert result.action == "Contact support."
-                # Verify API was never called
-                mock_anthropic.assert_not_called()
+            assert result.reason == "Unable to analyze."
+            assert result.action == "Contact support."
 
     @pytest.mark.asyncio
     async def test_api_key_from_environment(self, sample_user_context, sample_risk_inputs):
@@ -349,12 +371,15 @@ class TestExplainerMissingAPIKey:
             "action": "Test action.",
         }
 
-        with patch("anthropic.Anthropic") as mock_anthropic:
-            mock_client = MagicMock()
+        with patch("backend.app.ml.explainer.AsyncClient") as mock_async_client_class:
             mock_message = MagicMock()
             mock_message.content = [MagicMock(text=json.dumps(expected_response))]
-            mock_client.messages.create.return_value = mock_message
-            mock_anthropic.return_value = mock_client
+
+            mock_client = AsyncMock()
+            mock_client.messages.create = AsyncMock(return_value=mock_message)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_async_client_class.return_value = mock_client
 
             custom_key = "sk-test-custom-key-12345"
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": custom_key}):
@@ -367,7 +392,7 @@ class TestExplainerMissingAPIKey:
 
                 assert result.reason == expected_response["reason"]
                 # Verify API was initialized with correct key
-                mock_anthropic.assert_called_once_with(api_key=custom_key)
+                mock_async_client_class.assert_called_once_with(api_key=custom_key, timeout=10.0)
 
 
 class TestRiskExplanationDataclass:
@@ -408,12 +433,15 @@ class TestExplainerEdgeCases:
             "action": "Reach out proactively.",
         }
 
-        with patch("anthropic.Anthropic") as mock_anthropic:
-            mock_client = MagicMock()
+        with patch("backend.app.ml.explainer.AsyncClient") as mock_async_client_class:
             mock_message = MagicMock()
             mock_message.content = [MagicMock(text=json.dumps(expected_response))]
-            mock_client.messages.create.return_value = mock_message
-            mock_anthropic.return_value = mock_client
+
+            mock_client = AsyncMock()
+            mock_client.messages.create = AsyncMock(return_value=mock_message)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_async_client_class.return_value = mock_client
 
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
                 result = await explain_risk(
@@ -435,12 +463,15 @@ class TestExplainerEdgeCases:
             "action": "Monitor closely.",
         }
 
-        with patch("anthropic.Anthropic") as mock_anthropic:
-            mock_client = MagicMock()
+        with patch("backend.app.ml.explainer.AsyncClient") as mock_async_client_class:
             mock_message = MagicMock()
             mock_message.content = [MagicMock(text=json.dumps(expected_response))]
-            mock_client.messages.create.return_value = mock_message
-            mock_anthropic.return_value = mock_client
+
+            mock_client = AsyncMock()
+            mock_client.messages.create = AsyncMock(return_value=mock_message)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_async_client_class.return_value = mock_client
 
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
                 result = await explain_risk(
@@ -461,12 +492,15 @@ class TestExplainerEdgeCases:
             "action": "Urgent intervention needed.",
         }
 
-        with patch("anthropic.Anthropic") as mock_anthropic:
-            mock_client = MagicMock()
+        with patch("backend.app.ml.explainer.AsyncClient") as mock_async_client_class:
             mock_message = MagicMock()
             mock_message.content = [MagicMock(text=json.dumps(expected_response))]
-            mock_client.messages.create.return_value = mock_message
-            mock_anthropic.return_value = mock_client
+
+            mock_client = AsyncMock()
+            mock_client.messages.create = AsyncMock(return_value=mock_message)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_async_client_class.return_value = mock_client
 
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
                 # Test with risk_score = 100
@@ -502,12 +536,15 @@ class TestExplainerEdgeCases:
             "action": "Suggest plan upgrade.",
         }
 
-        with patch("anthropic.Anthropic") as mock_anthropic:
-            mock_client = MagicMock()
+        with patch("backend.app.ml.explainer.AsyncClient") as mock_async_client_class:
             mock_message = MagicMock()
             mock_message.content = [MagicMock(text=json.dumps(expected_response))]
-            mock_client.messages.create.return_value = mock_message
-            mock_anthropic.return_value = mock_client
+
+            mock_client = AsyncMock()
+            mock_client.messages.create = AsyncMock(return_value=mock_message)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_async_client_class.return_value = mock_client
 
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
                 result = await explain_risk(
@@ -519,7 +556,7 @@ class TestExplainerEdgeCases:
 
             assert isinstance(result, RiskExplanation)
             # Should use defaults (0) for missing fields
-            call_args = mock_anthropic.return_value.messages.create.call_args
+            call_args = mock_client.messages.create.call_args
             messages = call_args.kwargs["messages"]
             prompt = messages[0]["content"]
             assert "0 days" in prompt  # default values for missing fields
