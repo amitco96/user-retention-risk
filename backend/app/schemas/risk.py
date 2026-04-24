@@ -29,12 +29,21 @@ class RiskSummary(BaseModel):
     reason: str = Field(default="", description="Brief reason for risk")
 
 
+class CohortWeekData(BaseModel):
+    """Retention data for a single cohort week."""
+
+    week: int
+    retention_pct: float
+
+
+class Cohort(BaseModel):
+    """A signup cohort with week-over-week retention."""
+
+    cohort_week: str
+    weeks: List[CohortWeekData]
+
+
 class CohortRetentionData(BaseModel):
     """Cohort-based retention analysis."""
 
-    cohorts: List[str] = Field(..., description="List of cohort labels (signup dates)")
-    weeks: List[str] = Field(..., description="List of week labels (0, 1, 2, ...)")
-    retention_matrix: List[List[float]] = Field(
-        ...,
-        description="2D matrix of retention percentages [cohorts][weeks]"
-    )
+    cohorts: List[Cohort] = Field(default_factory=list)
