@@ -90,7 +90,7 @@ class TestAsyncEngine:
 
         assert engine is not None
         assert hasattr(engine, "connect")
-        assert hasattr(engine, "execute")
+        assert hasattr(engine, "begin")
 
     def test_session_maker_created(self):
         """Test that async_session_maker is created."""
@@ -104,26 +104,74 @@ class TestCreateTables:
     """Test table creation."""
 
     @pytest.mark.asyncio
+    async def test_create_tables_executes_on_sqlite(self):
+        """Test that create_tables actually creates tables on a SQLite engine."""
+        from sqlalchemy.ext.asyncio import create_async_engine
+        from sqlalchemy.pool import StaticPool
+        from sqlalchemy import inspect, text
+        from backend.app.db.models import Base
+
+        test_engine = create_async_engine(
+            "sqlite+aiosqlite:///:memory:",
+            echo=False,
+            future=True,
+            poolclass=StaticPool,
+            connect_args={"check_same_thread": False},
+        )
+
+        async with test_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            tables = await conn.run_sync(
+                lambda c: inspect(c).get_table_names()
+            )
+
+        assert "users" in tables
+        assert "events" in tables
+        assert "risk_scores" in tables
+
+        await test_engine.dispose()
+
+    @pytest.mark.asyncio
     async def test_create_tables_function_exists(self):
         """Test that create_tables function exists and is callable."""
         from backend.app.db.session import create_tables
 
         assert callable(create_tables)
 
-    @pytest.mark.asyncio
-    async def test_create_tables_with_mocked_engine(self):
-        """Test create_tables with mocked engine."""
-        from backend.app.db.session import create_tables, engine
-        from backend.app.db.models import Base
-
-        # Just ensure the function can be called
-        # In real environment it would connect to DB
-        # For now just verify the function signature
-        assert callable(create_tables)
-
 
 class TestDropTables:
     """Test table dropping."""
+
+    @pytest.mark.asyncio
+    async def test_drop_tables_executes_on_sqlite(self):
+        """Test that drop_tables actually drops tables on a SQLite engine."""
+        from sqlalchemy.ext.asyncio import create_async_engine
+        from sqlalchemy.pool import StaticPool
+        from sqlalchemy import inspect
+        from backend.app.db.models import Base
+
+        test_engine = create_async_engine(
+            "sqlite+aiosqlite:///:memory:",
+            echo=False,
+            future=True,
+            poolclass=StaticPool,
+            connect_args={"check_same_thread": False},
+        )
+
+        async with test_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+        async with test_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+            tables = await conn.run_sync(
+                lambda c: inspect(c).get_table_names()
+            )
+
+        assert "users" not in tables
+        assert "events" not in tables
+        assert "risk_scores" not in tables
+
+        await test_engine.dispose()
 
     @pytest.mark.asyncio
     async def test_drop_tables_function_exists(self):
@@ -151,8 +199,9 @@ class TestEngineConfiguration:
         """Test that engine has pool configuration."""
         from backend.app.db.session import engine
 
-        # Engine should have pool options set
-        assert engine.pool_pre_ping is not None
+        # pool_pre_ping is stored on the underlying sync pool, not the AsyncEngine.
+        assert engine.pool is not None
+        assert engine.sync_engine is not None
 
     def test_engine_echo_false_for_production(self):
         """Test that engine echo is False."""

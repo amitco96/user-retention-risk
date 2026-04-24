@@ -131,7 +131,22 @@
       "Bash(python -m pytest backend/tests/test_routers.py::TestGetCohortsRetention::test_cohorts_with_different_signup_months backend/tests/test_routers.py::TestGetCohortsRetention::test_cohort_with_no_activity_after_week0 -xvs --tb=short)",
       "Bash(python -m pytest backend/tests/test_routers.py::TestGetCohortsRetention::test_cohorts_with_different_signup_months backend/tests/test_routers.py::TestGetCohortsRetention::test_cohort_retention_all_values_valid -v)",
       "Bash(python -m pytest backend/tests/test_features.py backend/tests/test_model.py backend/tests/test_schemas.py backend/tests/test_health.py backend/tests/test_explainer.py backend/tests/test_routers.py -q --tb=no --cov=backend/app --cov-report=term)",
-      "Bash(python -m pytest backend/tests/test_routers.py -q --tb=no --cov=backend/app/routers/cohorts --cov-report=term-missing)"
+      "Bash(python -m pytest backend/tests/test_routers.py -q --tb=no --cov=backend/app/routers/cohorts --cov-report=term-missing)",
+      "Bash(python -m pytest backend/tests/test_routers.py --cov=backend/app/routers --cov-report=term-missing --tb=no -q)",
+      "Bash(python -m pytest backend/tests/test_routers.py::TestGetUserRiskById::test_get_user_risk_endpoint_returns_200 --cov=backend/app/routers/users --cov-report=term-missing -s)",
+      "Bash(python -m pytest backend/tests/test_routers.py::TestGetUserRiskById::test_get_user_risk_endpoint_returns_200 --cov=backend/app/routers/users --cov-report=term-missing -q)",
+      "Bash(python -m pytest backend/tests/test_routers.py::TestGetAtRiskUsers::test_get_at_risk_users_basic --cov=backend/app --cov-report=term-missing -q)",
+      "Bash(python -m pytest backend/tests/test_routers.py --cov=backend/app/routers --cov-report=term-missing --tb=short -q)",
+      "Bash(python -c \"import coverage; print\\(coverage.__version__\\); import sys; print\\(sys.version\\)\")",
+      "Bash(python -m coverage run --source=backend/app/routers -m pytest backend/tests/test_routers.py -q --no-header)",
+      "Bash(python -m coverage report --include=\"backend/app/routers/users.py,backend/app/routers/cohorts.py\" --show-missing)",
+      "Bash(python -m pytest backend/tests/test_routers.py::TestGetAtRiskUsers::test_get_at_risk_users_basic -s -v)",
+      "Bash(tail -80 C:\\\\\\\\Users\\\\\\\\amitc\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\c--user-retention-risk\\\\\\\\78c6e115-ff27-4996-9f23-55ec8aa3255c\\\\\\\\tasks\\\\\\\\b97z4npv8.output)",
+      "Bash(tasklist //FI \"IMAGENAME eq python.exe\")",
+      "Bash(python -m pytest backend/tests/test_routers.py::TestRouterLogicDirect --cov=backend/app --cov-report=term-missing -v)",
+      "Bash(python -m pytest backend/tests/ --cov=backend/app --cov-report=term-missing)",
+      "Read(//c/Users/amitc/AppData/Local/Temp/**)",
+      "Bash(git rm *)"
     ],
     "additionalDirectories": [
       "C:\\user-retention-risk\\ml",
