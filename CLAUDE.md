@@ -31,6 +31,14 @@ Production-grade ML system that scores user churn risk in real-time and explains
 - Docker stack tested & operational (port 8000)
 - All endpoints returning valid JSON responses ✓
 
+**Phase 5: ✓ COMPLETE** (commit 36df6f6)
+- 139 tests passing, 0 failures
+- Overall coverage: 97% (target was ≥ 80%)
+- users.py: 100%, cohorts.py: 96%, explainer.py: 100%, features.py: 100%, model.py: 97%
+- Direct async function call tests (TestRouterLogicDirect, TestRouterErrorPaths) bypass ASGI transport — fixes coverage.py tracking on Python 3.11
+- Deleted 4 broken legacy test files that used the wrong fixture architecture
+- async_session fixture: yields an AsyncSession bound to pytest-asyncio's event loop (NullPool, no cross-loop binding)
+
 ---
 
 ## Architecture
@@ -273,7 +281,7 @@ A phase is complete when:
   - [x] All 5 endpoints tested and returning valid JSON
   - [x] Feature engineering pipeline (extract_user_features)
   - [x] Cohort retention analysis (week-over-week %)
-- [ ] Phase 5: `pytest --cov=backend/app` passes at ≥ 80% coverage
+- [x] **Phase 5**: `pytest --cov=backend/app` passes at 97% coverage (139 tests, 0 failures)
 - [ ] `/review` returns no critical issues
 - [ ] `git grep -r "sk-ant"` returns nothing
 
@@ -282,8 +290,6 @@ A phase is complete when:
 ## Remaining Phases
 
 **Phase 2b**: `ml/ai_analysis.py` — Claude analyzes Sparkify dataset, outputs `ml/artifacts/correlation_report.json`
-
-**Phase 5**: `pytest` coverage ≥ 80% — unit & integration tests for all routers + ML pipeline
 
 **Phase 6**: React dashboard — risk table, user card, cohort chart
 
