@@ -209,35 +209,8 @@ class TestPostUserRiskFeedback:
         assert response.status_code == 422
 
 
-class TestCohortHelpers:
-    """Test cohort helper functions."""
-
-    def test_get_week_number_same_week(self):
-        """Test get_week_number for dates in same week."""
-        from backend.app.routers.cohorts import get_week_number
-
-        cohort_start = datetime(2026, 1, 1)
-        assert get_week_number(cohort_start, cohort_start) == 0
-        assert get_week_number(datetime(2026, 1, 4), cohort_start) == 0
-
-    def test_get_week_number_different_weeks(self):
-        """Test get_week_number for dates in different weeks."""
-        from backend.app.routers.cohorts import get_week_number
-
-        cohort_start = datetime(2026, 1, 1)
-        assert get_week_number(datetime(2026, 1, 8), cohort_start) == 1
-        assert get_week_number(datetime(2026, 1, 15), cohort_start) == 2
-
-    def test_get_week_number_before_cohort(self):
-        """Test get_week_number with date before cohort start returns negative."""
-        from backend.app.routers.cohorts import get_week_number
-
-        cohort_start = datetime(2026, 1, 15)
-        assert get_week_number(datetime(2026, 1, 1), cohort_start) < 0
-
-
 class TestGetCohortsRetention:
-    """Test GET /cohorts/retention endpoint."""
+    """Test GET /cohorts/retention endpoint with the nested cohort schema."""
 
     def test_get_cohorts_retention_returns_200(self, client_with_db):
         """Test that GET /cohorts/retention returns 200."""
@@ -251,19 +224,17 @@ class TestGetCohortsRetention:
         assert response.status_code == 200
         data = response.json()
         assert "cohorts" in data
-        assert "weeks" in data
-        assert "retention_matrix" in data
         assert isinstance(data["cohorts"], list)
-        assert isinstance(data["weeks"], list)
-        assert isinstance(data["retention_matrix"], list)
-
-    def test_get_cohorts_retention_matrix_shape(self, client_with_db):
-        """Test that retention_matrix has correct dimensions."""
-        response = client_with_db.get("/cohorts/retention")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert len(data["retention_matrix"]) == len(data["cohorts"])
+        for cohort in data["cohorts"]:
+            assert "cohort_week" in cohort
+            assert "weeks" in cohort
+            assert isinstance(cohort["cohort_week"], str)
+            assert isinstance(cohort["weeks"], list)
+            for entry in cohort["weeks"]:
+                assert "week" in entry
+                assert "retention_pct" in entry
+                assert isinstance(entry["week"], int)
+                assert isinstance(entry["retention_pct"], (int, float))
 
     def test_get_cohorts_retention_values_in_range(self, client_with_db):
         """Test that retention percentages are between 0-100."""
@@ -271,9 +242,9 @@ class TestGetCohortsRetention:
 
         assert response.status_code == 200
         data = response.json()
-        for cohort_row in data["retention_matrix"]:
-            for retention_pct in cohort_row:
-                assert 0 <= retention_pct <= 100
+        for cohort in data["cohorts"]:
+            for entry in cohort["weeks"]:
+                assert 0 <= entry["retention_pct"] <= 100
 
     def test_get_cohorts_retention_no_nan_values(self, client_with_db):
         """Test that there are no NaN or infinite values in retention."""
@@ -283,54 +254,57 @@ class TestGetCohortsRetention:
 
         assert response.status_code == 200
         data = response.json()
-        for cohort_row in data["retention_matrix"]:
-            for retention_pct in cohort_row:
-                assert not math.isnan(retention_pct)
-                assert math.isfinite(retention_pct)
+        for cohort in data["cohorts"]:
+            for entry in cohort["weeks"]:
+                assert not math.isnan(entry["retention_pct"])
+                assert math.isfinite(entry["retention_pct"])
 
     def test_cohorts_populated_from_seeded_users(self, client_with_db):
-        """Test that cohorts are derived from seeded user signup dates."""
+        """Test that cohorts are derived from seeded user signup dates + events."""
         response = client_with_db.get("/cohorts/retention")
 
         assert response.status_code == 200
         data = response.json()
         assert len(data["cohorts"]) >= 1
-        assert len(data["weeks"]) >= 1
-        assert len(data["retention_matrix"]) == len(data["cohorts"])
-        for cohort_row in data["retention_matrix"]:
-            assert len(cohort_row) == len(data["weeks"])
+        for cohort in data["cohorts"]:
+            assert len(cohort["weeks"]) >= 1
 
 
 class TestGetCohortsRetentionStructure:
-    """Test CohortRetentionData schema structure."""
+    """Test the per-cohort week structure of /cohorts/retention responses."""
 
-    def test_get_cohorts_retention_cohort_labels(self, client_with_db):
-        """Test that cohort labels are non-empty strings."""
+    def test_cohort_week_labels_are_year_month(self, client_with_db):
+        """cohort_week labels should be non-empty 'YYYY-MM' strings."""
         response = client_with_db.get("/cohorts/retention")
 
         assert response.status_code == 200
         data = response.json()
         for cohort in data["cohorts"]:
-            assert isinstance(cohort, str)
-            assert len(cohort) > 0
+            assert isinstance(cohort["cohort_week"], str)
+            # Format YYYY-MM (7 chars)
+            assert len(cohort["cohort_week"]) == 7
+            assert cohort["cohort_week"][4] == "-"
 
-    def test_get_cohorts_retention_week_labels(self, client_with_db):
-        """Test that week labels are non-empty strings."""
+    def test_week_indexes_are_non_negative_ints(self, client_with_db):
+        """Each week entry has a non-negative integer week index."""
         response = client_with_db.get("/cohorts/retention")
 
         assert response.status_code == 200
         data = response.json()
-        for week in data["weeks"]:
-            assert isinstance(week, str)
-            assert "Week" in week
+        for cohort in data["cohorts"]:
+            for entry in cohort["weeks"]:
+                assert isinstance(entry["week"], int)
+                assert entry["week"] >= 0
 
-    def test_get_cohorts_retention_consistency(self, client_with_db):
-        """Test that retention_matrix dimensions match cohorts count."""
+    def test_weeks_are_sorted_within_cohort(self, client_with_db):
+        """Per-cohort weeks should come back in ascending order."""
         response = client_with_db.get("/cohorts/retention")
 
         assert response.status_code == 200
         data = response.json()
-        assert len(data["retention_matrix"]) == len(data["cohorts"])
+        for cohort in data["cohorts"]:
+            week_indexes = [entry["week"] for entry in cohort["weeks"]]
+            assert week_indexes == sorted(week_indexes)
 
 
 class TestGetUserRiskWithRealFeatures:
@@ -537,18 +511,16 @@ class TestRouterLogicDirect:
 
         result = await get_cohort_retention(db=async_session)
         assert hasattr(result, "cohorts")
-        assert hasattr(result, "weeks")
-        assert hasattr(result, "retention_matrix")
         assert isinstance(result.cohorts, list)
-        assert isinstance(result.weeks, list)
-        assert isinstance(result.retention_matrix, list)
-        assert len(result.retention_matrix) == len(result.cohorts)
-        for row in result.retention_matrix:
-            for pct in row:
-                assert 0 <= pct <= 100
+        for cohort in result.cohorts:
+            assert isinstance(cohort.cohort_week, str)
+            assert isinstance(cohort.weeks, list)
+            for entry in cohort.weeks:
+                assert isinstance(entry.week, int)
+                assert 0 <= entry.retention_pct <= 100
 
     async def test_get_cohort_retention_direct_no_users(self, async_session):
-        """Empty-DB branch: delete all rows, call the endpoint, expect empty matrix."""
+        """Empty-DB branch: delete all rows, expect empty cohorts list."""
         from backend.app.db.models import Event, RiskScore as RS, User
         from backend.app.routers.cohorts import get_cohort_retention
 
@@ -560,11 +532,9 @@ class TestRouterLogicDirect:
 
         result = await get_cohort_retention(db=async_session)
         assert result.cohorts == []
-        assert result.weeks == []
-        assert result.retention_matrix == []
 
     async def test_get_cohort_retention_direct_users_without_events(self, async_session):
-        """Users exist but no events: returns cohorts with empty per-cohort rows."""
+        """Users exist but no events: SQL aggregation requires events, so cohorts is empty."""
         from backend.app.db.models import Event, RiskScore as RS
         from backend.app.routers.cohorts import get_cohort_retention
 
@@ -574,9 +544,8 @@ class TestRouterLogicDirect:
         await async_session.commit()
 
         result = await get_cohort_retention(db=async_session)
-        assert len(result.cohorts) >= 1
-        assert result.weeks == []
-        assert len(result.retention_matrix) == len(result.cohorts)
+        # Activity CTE inner-joins events, so without events there are no cohort rows
+        assert result.cohorts == []
 
 
 class TestRouterErrorPaths:

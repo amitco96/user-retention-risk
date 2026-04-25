@@ -39,6 +39,17 @@ Production-grade ML system that scores user churn risk in real-time and explains
 - Deleted 4 broken legacy test files that used the wrong fixture architecture
 - async_session fixture: yields an AsyncSession bound to pytest-asyncio's event loop (NullPool, no cross-loop binding)
 
+**Phase 6: ✓ COMPLETE** (commit da882eb + follow-up)
+- React 19 + Vite + Tailwind v4 + Recharts + axios — `frontend/` scaffold complete
+- Components: `RiskTable.jsx`, `UserRiskCard.jsx`, `CohortChart.jsx`, two-panel `App.jsx`
+- Vite proxy at `/api` → `http://127.0.0.1:8000` (forced IPv4 to bypass `wslrelay.exe` on `[::1]:8000`)
+- Backend `CORSMiddleware` allowing `http://localhost:5173`
+- Cohort endpoint rewritten with SQL aggregation (was O(N×M) over 85k events / 15s, now <1s)
+- Cohort schema reshaped to nested `{cohorts: [{cohort_week, weeks: [{week, retention_pct}]}]}` to match frontend
+- Cohort SQL is dialect-aware: `to_char/date_trunc/EXTRACT(EPOCH)` for Postgres, `strftime/julianday` for SQLite (test suite uses sqlite+aiosqlite)
+- `backend/seed_risk_scores.py` — scores all 1000 users with the ML model and inserts into `risk_scores` table (replaces destroyed in-memory state after container recreation)
+- 136 tests passing, 0 failures after schema migration
+
 ---
 
 ## Architecture
@@ -282,6 +293,11 @@ A phase is complete when:
   - [x] Feature engineering pipeline (extract_user_features)
   - [x] Cohort retention analysis (week-over-week %)
 - [x] **Phase 5**: `pytest --cov=backend/app` passes at 97% coverage (139 tests, 0 failures)
+- [x] **Phase 6**: React dashboard live at localhost:5173 with risk table, user card, and cohort chart wired to live API
+  - [x] Vite + Tailwind + Recharts + axios scaffold
+  - [x] Three components rendering live PostgreSQL data
+  - [x] CORS middleware + dialect-aware cohort SQL
+  - [x] `pytest` 136 passed, 0 failures after cohort schema migration
 - [ ] `/review` returns no critical issues
 - [ ] `git grep -r "sk-ant"` returns nothing
 
@@ -290,8 +306,6 @@ A phase is complete when:
 ## Remaining Phases
 
 **Phase 2b**: `ml/ai_analysis.py` — Claude analyzes Sparkify dataset, outputs `ml/artifacts/correlation_report.json`
-
-**Phase 6**: React dashboard — risk table, user card, cohort chart
 
 **Phase 7**: n8n nightly pipeline and Slack alert — rescore all users, alert on critical risk
 

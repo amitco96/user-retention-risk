@@ -8,7 +8,13 @@ import pytest
 from datetime import datetime
 from pydantic import ValidationError
 
-from backend.app.schemas.risk import RiskResponse, RiskSummary, CohortRetentionData
+from backend.app.schemas.risk import (
+    RiskResponse,
+    RiskSummary,
+    CohortRetentionData,
+    Cohort,
+    CohortWeekData,
+)
 
 
 class TestRiskResponse:
@@ -184,98 +190,103 @@ class TestRiskSummary:
 
 
 class TestCohortRetentionData:
-    """Test CohortRetentionData schema."""
+    """Test CohortRetentionData schema (nested cohorts -> weeks shape)."""
 
     def test_cohort_retention_data_valid(self):
-        """Test CohortRetentionData with valid data."""
+        """Test CohortRetentionData with valid nested data."""
         data = CohortRetentionData(
-            cohorts=["2024-01", "2024-02", "2024-03"],
-            weeks=["Week 0", "Week 1", "Week 2"],
-            retention_matrix=[
-                [100.0, 85.0, 70.0],
-                [98.0, 80.0, 65.0],
-                [95.0, 75.0, 60.0],
+            cohorts=[
+                Cohort(cohort_week="2024-01", weeks=[
+                    CohortWeekData(week=0, retention_pct=100.0),
+                    CohortWeekData(week=1, retention_pct=85.0),
+                    CohortWeekData(week=2, retention_pct=70.0),
+                ]),
+                Cohort(cohort_week="2024-02", weeks=[
+                    CohortWeekData(week=0, retention_pct=98.0),
+                    CohortWeekData(week=1, retention_pct=80.0),
+                ]),
+                Cohort(cohort_week="2024-03", weeks=[
+                    CohortWeekData(week=0, retention_pct=95.0),
+                ]),
             ],
         )
 
         assert len(data.cohorts) == 3
-        assert len(data.weeks) == 3
-        assert len(data.retention_matrix) == 3
+        assert data.cohorts[0].cohort_week == "2024-01"
+        assert len(data.cohorts[0].weeks) == 3
+        assert data.cohorts[0].weeks[1].retention_pct == 85.0
 
     def test_cohort_retention_empty_data(self):
-        """Test CohortRetentionData with empty data."""
-        data = CohortRetentionData(
-            cohorts=[],
-            weeks=[],
-            retention_matrix=[],
-        )
-
+        """Test CohortRetentionData with empty cohorts list."""
+        data = CohortRetentionData(cohorts=[])
         assert data.cohorts == []
-        assert data.weeks == []
-        assert data.retention_matrix == []
+
+    def test_cohort_retention_default_empty(self):
+        """Test that CohortRetentionData() defaults cohorts to empty list."""
+        data = CohortRetentionData()
+        assert data.cohorts == []
 
     def test_cohort_retention_single_cohort(self):
         """Test CohortRetentionData with single cohort."""
         data = CohortRetentionData(
-            cohorts=["2024-01"],
-            weeks=["Week 0", "Week 1"],
-            retention_matrix=[[100.0, 85.0]],
-        )
-
-        assert len(data.cohorts) == 1
-        assert len(data.weeks) == 2
-        assert len(data.retention_matrix) == 1
-        assert len(data.retention_matrix[0]) == 2
-
-    def test_cohort_retention_retention_values(self):
-        """Test that retention values can be 0-100."""
-        data = CohortRetentionData(
-            cohorts=["2024-01"],
-            weeks=["Week 0"],
-            retention_matrix=[[0.0]],
-        )
-        assert data.retention_matrix[0][0] == 0.0
-
-        data = CohortRetentionData(
-            cohorts=["2024-01"],
-            weeks=["Week 0"],
-            retention_matrix=[[100.0]],
-        )
-        assert data.retention_matrix[0][0] == 100.0
-
-        data = CohortRetentionData(
-            cohorts=["2024-01"],
-            weeks=["Week 0"],
-            retention_matrix=[[50.5]],
-        )
-        assert data.retention_matrix[0][0] == 50.5
-
-    def test_cohort_retention_serialization(self):
-        """Test that CohortRetentionData can be serialized."""
-        data = CohortRetentionData(
-            cohorts=["2024-01"],
-            weeks=["Week 0"],
-            retention_matrix=[[100.0]],
-        )
-
-        serialized = data.model_dump()
-        assert serialized["cohorts"] == ["2024-01"]
-        assert serialized["weeks"] == ["Week 0"]
-        assert serialized["retention_matrix"] == [[100.0]]
-
-    def test_cohort_retention_matrix_shape_flexibility(self):
-        """Test that retention_matrix can have variable shape."""
-        # Different number of weeks for each cohort is allowed
-        data = CohortRetentionData(
-            cohorts=["2024-01", "2024-02"],
-            weeks=["Week 0", "Week 1", "Week 2"],
-            retention_matrix=[
-                [100.0, 85.0],  # 2 values for first cohort
-                [98.0, 80.0, 65.0],  # 3 values for second cohort
+            cohorts=[
+                Cohort(cohort_week="2024-01", weeks=[
+                    CohortWeekData(week=0, retention_pct=100.0),
+                    CohortWeekData(week=1, retention_pct=85.0),
+                ]),
             ],
         )
 
-        assert len(data.retention_matrix) == 2
+        assert len(data.cohorts) == 1
+        assert len(data.cohorts[0].weeks) == 2
+        assert data.cohorts[0].weeks[0].week == 0
+        assert data.cohorts[0].weeks[1].retention_pct == 85.0
+
+    def test_cohort_retention_pct_values(self):
+        """Test that retention_pct accepts the full 0-100 range."""
+        data = CohortRetentionData(cohorts=[
+            Cohort(cohort_week="2024-01", weeks=[
+                CohortWeekData(week=0, retention_pct=0.0),
+                CohortWeekData(week=1, retention_pct=50.5),
+                CohortWeekData(week=2, retention_pct=100.0),
+            ]),
+        ])
+        weeks = data.cohorts[0].weeks
+        assert weeks[0].retention_pct == 0.0
+        assert weeks[1].retention_pct == 50.5
+        assert weeks[2].retention_pct == 100.0
+
+    def test_cohort_retention_serialization(self):
+        """Test that CohortRetentionData serializes to the expected dict shape."""
+        data = CohortRetentionData(cohorts=[
+            Cohort(cohort_week="2024-01", weeks=[
+                CohortWeekData(week=0, retention_pct=100.0),
+            ]),
+        ])
+
+        serialized = data.model_dump()
+        assert serialized == {
+            "cohorts": [
+                {"cohort_week": "2024-01", "weeks": [{"week": 0, "retention_pct": 100.0}]}
+            ]
+        }
+
+    def test_cohort_retention_variable_week_counts(self):
+        """Test that cohorts can have differing numbers of weeks."""
+        data = CohortRetentionData(cohorts=[
+            Cohort(cohort_week="2024-01", weeks=[
+                CohortWeekData(week=0, retention_pct=100.0),
+                CohortWeekData(week=1, retention_pct=85.0),
+            ]),
+            Cohort(cohort_week="2024-02", weeks=[
+                CohortWeekData(week=0, retention_pct=98.0),
+                CohortWeekData(week=1, retention_pct=80.0),
+                CohortWeekData(week=2, retention_pct=65.0),
+            ]),
+        ])
+
+        assert len(data.cohorts[0].weeks) == 2
+        assert len(data.cohorts[1].weeks) == 3
 
 
 class TestSchemaFieldValidation:
@@ -299,10 +310,10 @@ class TestSchemaFieldValidation:
                 # Missing risk_tier
             )
 
-    def test_cohort_retention_missing_required_field(self):
-        """Test that missing required fields fail validation."""
+    def test_cohort_missing_required_field(self):
+        """Test that missing required fields on Cohort fail validation."""
         with pytest.raises(ValidationError):
-            CohortRetentionData(
-                cohorts=["2024-01"],
-                # Missing weeks and retention_matrix
-            )
+            Cohort(cohort_week="2024-01")  # Missing weeks
+
+        with pytest.raises(ValidationError):
+            CohortWeekData(week=0)  # Missing retention_pct

@@ -93,17 +93,19 @@ async def test_schemas():
     )
     print(f"  RiskSummary created: {summary.user_id}")
 
-    # Test CohortRetentionData
-    cohort = CohortRetentionData(
-        cohorts=['2026-01', '2026-02', '2026-03'],
-        weeks=['Week 0', 'Week 1', 'Week 2', 'Week 3'],
-        retention_matrix=[
-            [100.0, 85.0, 70.0, 60.0],
-            [98.0, 80.0, 65.0, 55.0],
-            [95.0, 75.0, 60.0, 50.0],
-        ]
-    )
-    print(f"  CohortRetentionData created: {len(cohort.cohorts)} cohorts, {len(cohort.weeks)} weeks")
+    # Test CohortRetentionData (nested cohorts -> weeks shape)
+    from backend.app.schemas.risk import Cohort, CohortWeekData
+    cohort = CohortRetentionData(cohorts=[
+        Cohort(cohort_week='2026-01', weeks=[
+            CohortWeekData(week=0, retention_pct=100.0),
+            CohortWeekData(week=1, retention_pct=85.0),
+        ]),
+        Cohort(cohort_week='2026-02', weeks=[
+            CohortWeekData(week=0, retention_pct=98.0),
+        ]),
+    ])
+    weeks_count = sum(len(c.weeks) for c in cohort.cohorts)
+    print(f"  CohortRetentionData created: {len(cohort.cohorts)} cohorts, {weeks_count} total weeks")
     return True
 
 
