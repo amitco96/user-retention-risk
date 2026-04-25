@@ -1,0 +1,59 @@
+# VCS / editor
+.git
+.gitignore
+.gitattributes
+.github
+.vscode
+.idea
+
+# Python caches & builds
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.ruff_cache
+.coverage
+.coverage.*
+coverage.xml
+htmlcov
+.tox
+.mypy_cache
+.eggs
+*.egg-info
+build
+dist
+
+# Tests
+backend/tests
+tests
+**/tests
+
+# ML training data (only artifacts ship)
+ml/data
+ml/notebooks
+ml/__pycache__
+
+# Frontend (not part of backend image)
+frontend
+node_modules
+
+# Docs / scratch
+*.md
+!backend/**/*.md
+docs
+
+# Local secrets and env
+.env
+.env.*
+!.env.example
+
+# Docker / compose files themselves
+infrastructure/docker-compose.yml
+docker-compose.yml
+docker-compose.*.yml
+
+# OS junk
+.DS_Store
+Thumbs.db

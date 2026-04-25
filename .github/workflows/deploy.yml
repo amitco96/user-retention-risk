@@ -5,23 +5,73 @@ on:
     branches:
       - main
 
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: user-retention-risk-backend
+  ECS_CLUSTER: user-retention-risk-cluster
+  ECS_SERVICE: user-retention-risk-service
+  ECS_TASK_FAMILY: user-retention-risk
+
 jobs:
   deploy:
-    name: Deploy to ECS
+    name: Deploy to ECS Fargate
     runs-on: ubuntu-latest
-    # Optional: wait for CI to pass before deploying
-    # needs: ci
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy step — Phase 8 placeholder
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        id: build
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          echo "Deploy step — to be implemented in Phase 8"
-          echo "Planned actions:"
-          echo "  - Configure AWS credentials"
-          echo "  - Login to ECR"
-          echo "  - Build and push Docker image"
-          echo "  - Update ECS Fargate service"
-          echo "  - Wait for deployment to stabilize"
+          set -euo pipefail
+          IMAGE_URI_SHA="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          IMAGE_URI_LATEST="$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+
+          docker build \
+            -f infrastructure/Dockerfile \
+            -t "$IMAGE_URI_SHA" \
+            -t "$IMAGE_URI_LATEST" \
+            .
+
+          docker push "$IMAGE_URI_SHA"
+          docker push "$IMAGE_URI_LATEST"
+
+          echo "image_uri_sha=$IMAGE_URI_SHA" >> "$GITHUB_OUTPUT"
+          echo "image_uri_latest=$IMAGE_URI_LATEST" >> "$GITHUB_OUTPUT"
+
+      - name: Force new ECS deployment
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment \
+            --region "$AWS_REGION" \
+            --no-cli-pager > /dev/null
+
+      - name: Wait for ECS service to stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --region "$AWS_REGION"
+
+      - name: Deployment summary
+        run: |
+          echo "Deployed image: ${{ steps.build.outputs.image_uri_sha }}"
+          echo "Cluster: $ECS_CLUSTER"
+          echo "Service: $ECS_SERVICE"

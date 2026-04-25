@@ -1,1 +1,57 @@
-{}
+{
+  "family": "user-retention-risk",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::084847995880:role/user-retention-risk-execution-role",
+  "taskRoleArn": "arn:aws:iam::084847995880:role/user-retention-risk-task-role",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "containerDefinitions": [
+    {
+      "name": "user-retention-risk",
+      "image": "084847995880.dkr.ecr.us-east-1.amazonaws.com/user-retention-risk-backend:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:084847995880:secret:user-retention-risk/ANTHROPIC_API_KEY-1J7wOi"
+        },
+        {
+          "name": "API_PIPELINE_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:084847995880:secret:user-retention-risk/API_PIPELINE_SECRET-j7bL1T"
+        },
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:084847995880:secret:user-retention-risk/DATABASE_URL-cYvsIN"
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 30
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/user-retention-risk",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}
