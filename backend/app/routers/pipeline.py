@@ -77,7 +77,7 @@ async def rescore_all(db: AsyncSession = Depends(get_db)) -> RescoreSummary:
                 if not events:
                     continue
 
-                features = extract_user_features(events)
+                features = extract_user_features(events, plan_type=user.plan_type)
                 pred = predict(str(user.id), features)
 
                 now = datetime.now(timezone.utc)

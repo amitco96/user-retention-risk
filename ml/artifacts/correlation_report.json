@@ -1,376 +1,376 @@
 {
-  "timestamp": "2026-04-20T22:21:06.887030",
+  "timestamp": "2026-04-25T18:15:45.771730",
   "dataset_summary": {
-    "total_events": 22568,
-    "total_users": 300,
-    "churn_rate": 0.2
+    "total_events": 528005,
+    "total_users": 448,
+    "churn_rate": 0.221
   },
   "feature_statistics": {
     "days_since_last_activity": {
       "churned": {
-        "mean": 190.0500030517578,
-        "median": 211.0,
-        "std": 104.62542724609375,
-        "count": 60
+        "mean": 31.606060028076172,
+        "median": 29.0,
+        "std": 18.15411949157715,
+        "count": 99
       },
       "active": {
-        "mean": 191.40415954589844,
-        "median": 185.0,
-        "std": 104.89915466308594,
-        "count": 240
+        "mean": 7.297994136810303,
+        "median": 3.0,
+        "std": 10.460870742797852,
+        "count": 349
       },
       "overall": {
-        "mean": 191.13333129882812,
-        "median": 189.5,
-        "std": 104.84586334228516
+        "mean": 12.669642448425293,
+        "median": 6.0,
+        "std": 16.118223190307617
       },
       "churn_rate_percentiles": [
         {
           "percentile": 10,
-          "value": 40.8,
-          "churn_rate": 0.2333
+          "value": 0.0,
+          "churn_rate": 0.0208
         },
         {
           "percentile": 25,
-          "value": 102.0,
-          "churn_rate": 0.1948
+          "value": 1.0,
+          "churn_rate": 0.0216
         },
         {
           "percentile": 50,
-          "value": 189.5,
-          "churn_rate": 0.18
+          "value": 6.0,
+          "churn_rate": 0.0385
         },
         {
           "percentile": 75,
-          "value": 281.25,
-          "churn_rate": 0.2
+          "value": 18.25,
+          "churn_rate": 0.0893
         },
         {
           "percentile": 90,
-          "value": 340.0,
-          "churn_rate": 0.203
+          "value": 37.0,
+          "churn_rate": 0.151
         }
       ]
     },
     "session_count_30d": {
       "churned": {
-        "mean": 0.3499999940395355,
-        "median": 0.0,
-        "std": 1.1947802305221558,
-        "count": 60
+        "mean": 3.151515245437622,
+        "median": 1.0,
+        "std": 5.326441764831543,
+        "count": 99
       },
       "active": {
-        "mean": 0.7208333611488342,
-        "median": 0.0,
-        "std": 3.388888359069824,
-        "count": 240
+        "mean": 6.819484233856201,
+        "median": 5.0,
+        "std": 6.856621265411377,
+        "count": 349
       },
       "overall": {
-        "mean": 0.6466666460037231,
-        "median": 0.0,
-        "std": 3.0814208984375
+        "mean": 6.0089287757873535,
+        "median": 4.0,
+        "std": 6.723819255828857
       },
       "churn_rate_percentiles": [
         {
           "percentile": 10,
           "value": 0.0,
-          "churn_rate": 0.195
+          "churn_rate": 0.7538
         },
         {
           "percentile": 25,
-          "value": 0.0,
-          "churn_rate": 0.195
+          "value": 1.0,
+          "churn_rate": 0.4634
         },
         {
           "percentile": 50,
-          "value": 0.0,
-          "churn_rate": 0.195
+          "value": 4.0,
+          "churn_rate": 0.3136
         },
         {
           "percentile": 75,
-          "value": 0.0,
-          "churn_rate": 0.195
+          "value": 8.0,
+          "churn_rate": 0.2624
         },
         {
           "percentile": 90,
-          "value": 0.0,
-          "churn_rate": 0.195
+          "value": 14.0,
+          "churn_rate": 0.2291
         }
       ]
     },
     "songs_played_total": {
       "churned": {
-        "mean": 2.4833333492279053,
-        "median": 2.0,
-        "std": 1.5544737577438354,
-        "count": 60
+        "mean": 852.111083984375,
+        "median": 439.0,
+        "std": 1049.4468994140625,
+        "count": 99
       },
       "active": {
-        "mean": 12.433333396911621,
-        "median": 12.0,
-        "std": 5.927665710449219,
-        "count": 240
+        "mean": 998.618896484375,
+        "median": 601.0,
+        "std": 1174.369140625,
+        "count": 349
       },
       "overall": {
-        "mean": 10.443333625793457,
-        "median": 9.0,
-        "std": 6.665842533111572
+        "mean": 966.2432861328125,
+        "median": 550.0,
+        "std": 1149.5426025390625
       },
       "churn_rate_percentiles": [
         {
           "percentile": 10,
-          "value": 2.0,
-          "churn_rate": 0.9394
+          "value": 86.0,
+          "churn_rate": 0.1778
         },
         {
           "percentile": 25,
-          "value": 5.0,
-          "churn_rate": 0.7108
+          "value": 187.75,
+          "churn_rate": 0.2411
         },
         {
           "percentile": 50,
-          "value": 9.0,
-          "churn_rate": 0.3896
+          "value": 550.0,
+          "churn_rate": 0.25
         },
         {
           "percentile": 75,
-          "value": 16.0,
-          "churn_rate": 0.2521
+          "value": 1275.0,
+          "churn_rate": 0.2321
         },
         {
           "percentile": 90,
-          "value": 20.0,
-          "churn_rate": 0.219
+          "value": 2245.9,
+          "churn_rate": 0.2308
         }
       ]
     },
     "thumbs_up_count": {
       "churned": {
-        "mean": 2.7333333492279053,
-        "median": 2.5,
-        "std": 1.8061622381210327,
-        "count": 60
+        "mean": 43.43434524536133,
+        "median": 17.0,
+        "std": 54.59310531616211,
+        "count": 99
       },
       "active": {
-        "mean": 12.220833778381348,
-        "median": 12.0,
-        "std": 5.829985618591309,
-        "count": 240
+        "mean": 55.94842529296875,
+        "median": 31.0,
+        "std": 73.03186798095703,
+        "count": 349
       },
       "overall": {
-        "mean": 10.323333740234375,
-        "median": 10.0,
-        "std": 6.499650478363037
+        "mean": 53.18303680419922,
+        "median": 28.0,
+        "std": 69.57432556152344
       },
       "churn_rate_percentiles": [
         {
           "percentile": 10,
-          "value": 2.0,
-          "churn_rate": 0.9091
+          "value": 3.0,
+          "churn_rate": 0.1957
         },
         {
           "percentile": 25,
-          "value": 5.0,
-          "churn_rate": 0.6477
+          "value": 9.0,
+          "churn_rate": 0.2435
         },
         {
           "percentile": 50,
-          "value": 10.0,
-          "churn_rate": 0.3797
+          "value": 28.0,
+          "churn_rate": 0.2611
         },
         {
           "percentile": 75,
-          "value": 15.0,
-          "churn_rate": 0.2521
+          "value": 76.25,
+          "churn_rate": 0.2292
         },
         {
           "percentile": 90,
-          "value": 19.1,
-          "churn_rate": 0.2222
+          "value": 120.3,
+          "churn_rate": 0.2333
         }
       ]
     },
     "thumbs_down_count": {
       "churned": {
-        "mean": 2.4166667461395264,
-        "median": 2.0,
-        "std": 1.734855055809021,
-        "count": 60
+        "mean": 11.676767349243164,
+        "median": 7.0,
+        "std": 15.12562084197998,
+        "count": 99
       },
       "active": {
-        "mean": 12.441666603088379,
-        "median": 12.0,
-        "std": 5.969779014587402,
-        "count": 240
+        "mean": 10.759312629699707,
+        "median": 6.0,
+        "std": 12.783157348632812,
+        "count": 349
       },
       "overall": {
-        "mean": 10.436666488647461,
-        "median": 10.0,
-        "std": 6.722548484802246
+        "mean": 10.962053298950195,
+        "median": 6.0,
+        "std": 13.341694831848145
       },
       "churn_rate_percentiles": [
         {
           "percentile": 10,
-          "value": 2.0,
-          "churn_rate": 0.9
+          "value": 0.0,
+          "churn_rate": 0.1695
         },
         {
           "percentile": 25,
-          "value": 5.0,
-          "churn_rate": 0.6222
+          "value": 2.0,
+          "churn_rate": 0.2482
         },
         {
           "percentile": 50,
-          "value": 10.0,
-          "churn_rate": 0.3797
+          "value": 6.0,
+          "churn_rate": 0.2112
         },
         {
           "percentile": 75,
-          "value": 15.0,
-          "churn_rate": 0.2632
+          "value": 15.25,
+          "churn_rate": 0.2262
         },
         {
           "percentile": 90,
-          "value": 20.0,
-          "churn_rate": 0.2158
+          "value": 30.3,
+          "churn_rate": 0.2159
         }
       ]
     },
     "add_to_playlist_count": {
       "churned": {
-        "mean": 2.5,
-        "median": 3.0,
-        "std": 1.6782927513122559,
-        "count": 60
+        "mean": 22.81818199157715,
+        "median": 12.0,
+        "std": 27.242036819458008,
+        "count": 99
       },
       "active": {
-        "mean": 13.087499618530273,
-        "median": 13.0,
-        "std": 6.145853042602539,
-        "count": 240
+        "mean": 28.911174774169922,
+        "median": 17.0,
+        "std": 35.128265380859375,
+        "count": 349
       },
       "overall": {
-        "mean": 10.970000267028809,
-        "median": 10.0,
-        "std": 6.979667663574219
+        "mean": 27.56473159790039,
+        "median": 16.0,
+        "std": 33.64063262939453
       },
       "churn_rate_percentiles": [
         {
           "percentile": 10,
-          "value": 2.0,
-          "churn_rate": 0.9032
+          "value": 1.7,
+          "churn_rate": 0.2444
         },
         {
           "percentile": 25,
           "value": 5.0,
-          "churn_rate": 0.6824
+          "churn_rate": 0.2627
         },
         {
           "percentile": 50,
-          "value": 10.0,
-          "churn_rate": 0.3846
+          "value": 16.0,
+          "churn_rate": 0.2467
         },
         {
           "percentile": 75,
-          "value": 16.0,
-          "churn_rate": 0.2609
+          "value": 37.25,
+          "churn_rate": 0.2292
         },
         {
           "percentile": 90,
-          "value": 21.0,
-          "churn_rate": 0.2182
+          "value": 66.0,
+          "churn_rate": 0.2296
         }
       ]
     },
     "avg_session_duration_min": {
       "churned": {
-        "mean": 26.58673858642578,
-        "median": 24.548725128173828,
-        "std": 11.358595848083496,
-        "count": 60
+        "mean": 290.85345458984375,
+        "median": 258.8145751953125,
+        "std": 207.2310791015625,
+        "count": 99
       },
       "active": {
-        "mean": 30.71910285949707,
-        "median": 29.274425506591797,
-        "std": 10.454792976379395,
-        "count": 240
+        "mean": 261.24615478515625,
+        "median": 241.71141052246094,
+        "std": 149.0809783935547,
+        "count": 349
       },
       "overall": {
-        "mean": 29.892629623413086,
-        "median": 28.869173049926758,
-        "std": 10.769304275512695
+        "mean": 267.7888488769531,
+        "median": 245.88299560546875,
+        "std": 164.17886352539062
       },
       "churn_rate_percentiles": [
         {
           "percentile": 10,
-          "value": 17.24,
-          "churn_rate": 0.4333
+          "value": 92.94,
+          "churn_rate": 0.1111
         },
         {
           "percentile": 25,
-          "value": 22.37,
-          "churn_rate": 0.3467
+          "value": 137.09,
+          "churn_rate": 0.1964
         },
         {
           "percentile": 50,
-          "value": 28.87,
-          "churn_rate": 0.24
+          "value": 245.88,
+          "churn_rate": 0.2098
         },
         {
           "percentile": 75,
-          "value": 35.18,
-          "churn_rate": 0.2044
+          "value": 362.69,
+          "churn_rate": 0.2321
         },
         {
           "percentile": 90,
-          "value": 44.31,
-          "churn_rate": 0.2
+          "value": 464.13,
+          "churn_rate": 0.2084
         }
       ]
     },
     "subscription_level": {
       "churned": {
-        "mean": 0.5833333134651184,
+        "mean": 0.6767676472663879,
         "median": 1.0,
-        "std": 0.4930066466331482,
-        "count": 60
+        "std": 0.4677105247974396,
+        "count": 99
       },
       "active": {
-        "mean": 0.5708333253860474,
+        "mean": 0.5988538861274719,
         "median": 1.0,
-        "std": 0.49495723843574524,
-        "count": 240
+        "std": 0.4901305139064789,
+        "count": 349
       },
       "overall": {
-        "mean": 0.5733333230018616,
+        "mean": 0.6160714030265808,
         "median": 1.0,
-        "std": 0.4945930242538452
+        "std": 0.48634085059165955
       },
       "churn_rate_percentiles": [
         {
           "percentile": 10,
           "value": 0.0,
-          "churn_rate": 0.1953
+          "churn_rate": 0.186
         },
         {
           "percentile": 25,
           "value": 0.0,
-          "churn_rate": 0.1953
+          "churn_rate": 0.186
         },
         {
           "percentile": 50,
           "value": 1.0,
-          "churn_rate": 0.2
+          "churn_rate": 0.221
         },
         {
           "percentile": 75,
           "value": 1.0,
-          "churn_rate": 0.2
+          "churn_rate": 0.221
         },
         {
           "percentile": 90,
           "value": 1.0,
-          "churn_rate": 0.2
+          "churn_rate": 0.221
         }
       ]
     }
@@ -378,38 +378,38 @@
   "claude_analysis": {
     "top_indicators": [
       {
-        "feature": "songs_played_total",
-        "insight": "Users with very low song play counts show extremely high churn rates. The bottom 10th percentile (\u22642 songs) has a 93.94% churn rate, indicating users who barely engage with the platform are almost certain to leave. This represents the strongest predictor of churn.",
-        "risk_multiplier": 4.7
+        "feature": "session_count_30d",
+        "insight": "Low session count is the strongest predictor of churn. Users with 0 sessions have a 75.38% churn rate vs 22.10% overall. This indicates disengagement - users who stop actively using the service are highly likely to cancel. The dramatic decline from 75.38% to 22.91% churn rate as sessions increase shows strong predictive power.",
+        "risk_multiplier": 3.41
       },
       {
-        "feature": "thumbs_down_count",
-        "insight": "Low thumbs down activity paradoxically predicts churn, as it indicates users aren't engaging enough to provide feedback. Users in the bottom 10th percentile (\u22642 thumbs down) have a 90% churn rate, suggesting minimal platform interaction.",
-        "risk_multiplier": 4.5
-      },
-      {
-        "feature": "thumbs_up_count",
-        "insight": "Similar to thumbs down, very low positive feedback indicates disengagement. Users giving \u22642 thumbs up have a 90.91% churn rate, showing that lack of positive engagement strongly predicts departure.",
-        "risk_multiplier": 4.5
-      },
-      {
-        "feature": "add_to_playlist_count",
-        "insight": "Low playlist activity indicates users aren't investing in personalizing their experience. Bottom 10th percentile users (\u22642 playlist additions) show 90.32% churn rate, reflecting lack of platform ownership and investment.",
-        "risk_multiplier": 4.5
+        "feature": "days_since_last_activity",
+        "insight": "Users who haven't been active recently are much more likely to churn. Churned users average 31.6 days since last activity vs 7.3 for active users. This 24-day difference represents disengagement and lost habit formation. Users in early percentiles (0-1 days) have very low churn rates around 2%.",
+        "risk_multiplier": 1.43
       },
       {
         "feature": "avg_session_duration_min",
-        "insight": "Shorter session durations indicate reduced engagement and satisfaction. Users with sessions \u226417.24 minutes have 43.33% churn rate, suggesting they're not finding enough value to stay engaged for longer periods.",
-        "risk_multiplier": 2.2
+        "insight": "Surprisingly, users with longer average session durations are slightly more likely to churn (290.85 min vs 261.25 min for active users). This counterintuitive pattern may indicate users spending more time searching for content they like but failing to find it, leading to frustration and eventual churn.",
+        "risk_multiplier": 1.11
+      },
+      {
+        "feature": "thumbs_down_count",
+        "insight": "Users who give more thumbs down have slightly higher churn rates (11.68 vs 10.76 average). This suggests dissatisfaction with content recommendations. However, the effect is modest, indicating that some negative feedback is normal user behavior.",
+        "risk_multiplier": 1.09
+      },
+      {
+        "feature": "subscription_level",
+        "insight": "Paid subscribers (subscription_level=1) have slightly higher churn rates than free users. Churned users have 68% paid vs 60% for active users. This suggests paid users have higher expectations and may be more likely to cancel when unsatisfied, while free users have lower switching costs.",
+        "risk_multiplier": 1.04
       }
     ],
-    "summary": "The strongest churn predictors are all related to extremely low engagement rather than negative behaviors. Users who barely interact with core platform features (playing songs, rating content, creating playlists) show churn rates of 90%+. This suggests churn is primarily driven by failure to engage rather than dissatisfaction with the service. The pattern indicates a critical engagement threshold - users who don't reach basic interaction levels are almost certain to churn.",
+    "summary": "The strongest churn predictors are behavioral disengagement signals: low recent session activity (3.41x risk) and long periods since last activity (1.43x risk). Surprisingly, longer session durations slightly increase churn risk, possibly indicating user frustration. Content satisfaction (thumbs down) and subscription type show weaker but meaningful patterns. Total songs played and playlist additions show minimal predictive value.",
     "recommended_features": [
-      "songs_played_total",
+      "session_count_30d",
+      "days_since_last_activity",
+      "avg_session_duration_min",
       "thumbs_down_count",
-      "thumbs_up_count",
-      "add_to_playlist_count",
-      "avg_session_duration_min"
+      "subscription_level"
     ]
   }
 }

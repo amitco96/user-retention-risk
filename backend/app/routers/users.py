@@ -83,8 +83,9 @@ async def get_user_risk(
                 detail="No events found for user. Cannot score.",
             )
 
-        # Extract features from events (pass Event objects directly)
-        features = extract_user_features(events)
+        # Extract features from events (pass Event objects directly).
+        # Forward plan_type so subscription_level is computed correctly.
+        features = extract_user_features(events, plan_type=user.plan_type)
 
         # Score with model
         prediction = predict(user_id, features)

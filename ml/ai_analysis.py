@@ -26,7 +26,18 @@ from typing import Dict, List, Tuple, Any
 
 import numpy as np
 import pandas as pd
-from anthropic import Anthropic
+
+# Optional: load .env if python-dotenv is installed
+try:
+    from dotenv import load_dotenv  # type: ignore
+    load_dotenv(Path(__file__).parent.parent / ".env")
+except Exception:
+    pass
+
+try:
+    from anthropic import Anthropic
+except Exception:  # anthropic optional at import time
+    Anthropic = None  # type: ignore
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -231,6 +242,58 @@ def parse_claude_response(response_text: str) -> Dict[str, Any]:
         return parsed
     except json.JSONDecodeError as e:
         raise ValueError(f"Failed to parse Claude's response as JSON: {e}\n\nResponse:\n{response_text}")
+
+
+def deterministic_correlation_fallback(
+    X: np.ndarray,
+    y: np.ndarray,
+    feature_names: List[str],
+) -> Dict[str, Any]:
+    """
+    Deterministic fallback when Claude is unreachable.
+
+    Computes Pearson correlation of each feature against the churn label
+    and synthesizes a recommended-features list ordered by |corr|.
+    """
+    insights = []
+    for i, name in enumerate(feature_names):
+        col = X[:, i].astype(np.float64)
+        if np.std(col) == 0 or np.std(y) == 0:
+            corr = 0.0
+        else:
+            corr = float(np.corrcoef(col, y.astype(np.float64))[0, 1])
+        # Estimate a risk multiplier: churn rate among above-median vs overall
+        median = float(np.median(col))
+        mask_high = col >= median
+        rate_high = float(np.mean(y[mask_high])) if mask_high.any() else 0.0
+        overall = float(np.mean(y)) if len(y) else 0.0
+        risk_multiplier = (rate_high / overall) if overall > 0 else 1.0
+
+        direction = "positively" if corr > 0 else "negatively"
+        insights.append(
+            {
+                "feature": name,
+                "insight": (
+                    f"Correlates {direction} with churn (r={corr:+.3f})."
+                ),
+                "risk_multiplier": round(risk_multiplier, 3),
+                "_abs_corr": abs(corr),
+            }
+        )
+
+    insights.sort(key=lambda d: d["_abs_corr"], reverse=True)
+    top = insights[: min(5, len(insights))]
+    for d in insights:
+        d.pop("_abs_corr", None)
+
+    return {
+        "top_indicators": top,
+        "summary": (
+            "Deterministic fallback (Claude unavailable): top indicators ranked "
+            "by |Pearson correlation| with the churn label."
+        ),
+        "recommended_features": [d["feature"] for d in top],
+    }
 
 
 def analyze_with_claude(statistics_text: str) -> Dict[str, Any]:
@@ -442,10 +505,19 @@ def main():
         logger.info("Step 4: Formatting statistics for Claude...")
         statistics_text = format_statistics_for_claude(stats, overall_churn_rate)
 
-        # Step 5: Call Claude
+        # Step 5: Call Claude (with deterministic fallback if unreachable)
         logger.info("Step 5: Calling Claude API for analysis...")
-        claude_analysis = analyze_with_claude(statistics_text)
-        logger.info("Claude analysis complete")
+        try:
+            if Anthropic is None:
+                raise RuntimeError("anthropic package not installed")
+            claude_analysis = analyze_with_claude(statistics_text)
+            logger.info("Claude analysis complete")
+        except Exception as e:
+            logger.warning(
+                "Claude unreachable (%s) — using deterministic correlation fallback",
+                e,
+            )
+            claude_analysis = deterministic_correlation_fallback(X, y, feature_names)
 
         # Step 6: Save report
         logger.info("Step 6: Saving correlation report...")

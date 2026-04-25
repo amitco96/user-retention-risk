@@ -2,150 +2,169 @@
 
 ## Model Overview
 
-This XGBoost binary classification model predicts user churn risk (probability of becoming inactive) with explainability via SHAP values. The model scores each user on a 0-100 scale and identifies the top 3 risk drivers.
+XGBoost binary classifier predicting user churn risk (probability of cancelling)
+on a 0-100 scale, with SHAP-based explanations. The top 3 SHAP-ranked features
+are surfaced per prediction so a CSM can see *why* a user is flagged.
 
 ## Training Data
 
-- **Source**: PostgreSQL database (backend/app/db/)
-- **Table**: `users` (joined with `events`)
-- **Time Period**: Synthetic data with 90-day observation window
-- **Sample Size**: 1,000 users (Phase 1), 85,638 events
-- **Churn Rate**: ~17% (200 churned users, 800 retained)
-- **Train/Validation Split**: 80/20 (800 train, 200 val)
+- **Source**: Sparkify medium event-data dump (`ml/data/medium-sparkify-event-data.json`, ~232 MB JSONL)
+- **Time window**: 2018-10-01 → 2018-12-01 (raw event timestamps)
+- **Total events**: 528,005
+- **Distinct users**: 448 (after dropping rows with empty `userId`)
+- **Churn rate**: 22.10% (99 churned / 349 retained)
+- **Train/test split**: stratified 80/20, `random_state=42`
+  - Train: 358 users (churn rate 22.07%)
+  - Test:  90 users (churn rate 22.22%)
+
+Churn label: a user is `churn=1` if their `userId` ever appears on the
+`Cancellation Confirmation` page.
 
 ## Features (8 total)
 
 | Feature | Type | Description | Units |
-|---------|------|-------------|-------|
-| `days_since_last_login` | Continuous | Recency: Days since most recent login event | days |
-| `session_count_30d` | Discrete | Frequency: Number of logins in last 30 days | count |
-| `feature_usage_count` | Discrete | Depth: Total feature_used events (all time) | count |
-| `support_tickets_open` | Discrete | Friction: Number of open support tickets | count |
-| `plan_type_encoded` | Ordinal | Value tier: free=0, starter=1, pro=2, enterprise=3 | 0-3 |
-| `avg_session_duration_min` | Continuous | Quality: Mean session duration (login events) | minutes |
-| `days_since_signup` | Continuous | Tenure: Account age | days |
-| `login_streak_broken` | Binary | Behavioral: Login gap >1 day in last 7 days | 0/1 |
+|---|---|---|---|
+| `days_since_last_activity` | Continuous | Days from observation date to most recent event | days |
+| `session_count_30d` | Discrete | Distinct `sessionId` count in last 30 days (gap-clustered at runtime when sessionId is unavailable, e.g. live Postgres events) | count |
+| `songs_played_total` | Discrete | Total `NextSong` events all-time (live: `feature_used` events) | count |
+| `thumbs_up_count` | Discrete | `Thumbs Up` events (live: `support_ticket` with sentiment=positive) | count |
+| `thumbs_down_count` | Discrete | `Thumbs Down` events (live: `support_ticket` with sentiment=negative) | count |
+| `add_to_playlist_count` | Discrete | `Add to Playlist` events (live: `feature_used` with feature_name=playlist) | count |
+| `avg_session_duration_min` | Continuous | Mean intra-session span in minutes | minutes |
+| `subscription_level` | Binary | `free`=0, `paid`/`starter`/`pro`/`enterprise`=1 | 0/1 |
 
-## Target Label
+### Imputation strategy
 
-**Churn Definition** (binary):
-```python
-churn = (days_since_last_login >= 30) AND (sessions_60d < 3)
-```
-
-- `1` = Churned (inactive user: no login ≥30d ago AND <3 logins in 60d)
-- `0` = Retained (active user)
+- Users with no events are skipped during training (label undefined).
+- `days_since_last_activity` is clamped to 0 when `observation_date` precedes
+  the most recent event (clock skew tolerance).
+- `subscription_level` defaults to `0` (free) when not supplied by the caller
+  in live inference.
+- All other counts default to 0 when the corresponding event class is absent.
 
 ## Model Architecture
 
-- **Algorithm**: XGBoost Classifier (gradient boosting)
-- **Number of Boosting Rounds**: ~500 (stopped early at round 10 without validation improvement)
-- **Max Tree Depth**: 6
-- **Learning Rate**: 0.1
-- **Subsample**: 0.8 (row subsampling)
-- **Column Subsample**: 0.8 (feature subsampling)
-- **Early Stopping**: Yes (10 rounds without improvement on validation set)
-- **Evaluation Metric**: Log loss
+- **Algorithm**: XGBoost classifier (binary:logistic)
+- **n_estimators**: 400 (early stopping at round 36 best iter)
+- **max_depth**: 6
+- **learning_rate**: 0.1
+- **subsample / colsample_bytree**: 0.9 / 0.9
+- **min_child_weight**: 2
+- **reg_lambda**: 1.0
+- **scale_pos_weight**: ~3.53 (`neg_count / pos_count` from train fold)
+- **eval_metric**: `auc`, with `early_stopping_rounds=20` on the test split
+- **random_state**: 42
 
-## Evaluation Metrics (Validation Set, 200 samples)
+Features are scaled with `StandardScaler` (fit on train only, then applied to
+test). Trees are scale-invariant in principle but we keep the scaler in the
+pipeline so the same artifact serves any future linear or distance-based head
+without re-engineering.
+
+## Evaluation Metrics (Test Set, n=90)
 
 | Metric | Value |
-|--------|-------|
-| AUC-ROC | TBD (target ≥ 0.82) |
-| Precision | TBD |
-| Recall | TBD |
-| F1-Score | TBD |
-| True Negatives | TBD |
-| False Positives | TBD |
-| False Negatives | TBD |
-| True Positives | TBD |
+|---|---|
+| AUC-ROC   | **0.9271** |
+| Precision | 0.7619 |
+| Recall    | 0.8000 |
+| F1-Score  | 0.7805 |
 
-**Note**: Metrics populated after training run.
+Confusion Matrix:
 
-## Explainability (SHAP)
+|                | Predicted Retained | Predicted Churn |
+|---|---|---|
+| **Actual Retained** | 65 (TN) | 5 (FP)  |
+| **Actual Churn**    | 4  (FN) | 16 (TP) |
 
-- **Explainer Type**: SHAP TreeExplainer (efficient for tree models)
-- **Top Drivers**: Top 3 features ranked by absolute SHAP value per prediction
-- **SHAP Values**: All 8 feature contributions included in API response
-- **Interpretation**: Positive SHAP value = increases churn risk; Negative = decreases risk
+Target was AUC-ROC ≥ 0.82; achieved 0.9271.
+
+## Top SHAP Features (mean |SHAP| on test set)
+
+| Rank | Feature | Mean \|SHAP\| |
+|---|---|---|
+| 1 | `days_since_last_activity` | 1.7015 |
+| 2 | `songs_played_total`       | 0.5260 |
+| 3 | `thumbs_down_count`        | 0.2916 |
+| 4 | `thumbs_up_count`          | 0.2818 |
+| 5 | `add_to_playlist_count`    | 0.2239 |
+| 6 | `avg_session_duration_min` | 0.1824 |
+| 7 | `session_count_30d`        | 0.1720 |
+| 8 | `subscription_level`       | 0.0167 |
+
+Interpretation: recency dominates (~3x the next strongest signal). Engagement
+depth (`songs_played_total`) is the strongest behavioral signal after recency.
+`subscription_level` is near-noise on this dataset.
 
 ## Risk Score & Tiers
 
-Risk Score Calculation:
 ```python
 risk_score = int(model.predict_proba(X)[:, 1] * 100)  # 0-100
 ```
 
-Risk Tier Mapping:
-- **Low**: 0-40
-- **Medium**: 41-70
-- **High**: 71-85
-- **Critical**: 86-100
+| Tier | Range |
+|---|---|
+| low | 0-40 |
+| medium | 41-70 |
+| high | 71-85 |
+| critical | 86-100 |
 
 ## Data Leakage Prevention
 
-✓ All features computed using only data **before** the observation period
-✓ StandardScaler fitted on train set only, applied to validation set
-✓ No future information (e.g., support_ticket status) included
-✓ Churn label uses hard cutoff (≥30 days) without lookahead
+- Features are computed only from events that occur strictly before (or up to)
+  the observation date — no post-cancellation lookahead.
+- `StandardScaler` is fit on train only.
+- Churn label is hard-coded from `Cancellation Confirmation` page presence and
+  is not used as input to any feature.
 
-## Known Failure Modes
+## Known Failure Modes / Limitations
 
-1. **Class Imbalance**: 17% churn rate may bias model toward retained class. Monitor: precision/recall tradeoff on at-risk cohort.
-
-2. **New User Signal Weakness**: Users with <30 days tenure have limited `days_since_last_login` signal. Recommendation: Apply lower thresholds for new users (age <60d).
-
-3. **Plan Type Leakage Risk**: Enterprise customers may have different behavior. Recommendation: Monitor AUC by plan tier; consider separate models if AUC variance >0.05.
-
-4. **Session Duration Outliers**: Very long sessions (>8 hours) are rare; may inflate `avg_session_duration_min` for inactive users. Mitigation: Clipped at 99th percentile.
-
-5. **Cold Start (No Events)**: Users with zero events default to feature values (e.g., `days_since_last_login=999`). These are likely to be high-risk (correct behavior).
-
-6. **Time Dependency**: Model trained on synthetic data with fixed time windows (90d observation). Real-world performance may degrade with seasonal patterns.
+1. **Small distinct-user count.** The medium dump has only 448 distinct
+   non-anonymous users. Even with stratification, the test fold is 90 users,
+   so all metrics carry binomial confidence intervals on the order of ±8-10pp.
+   Treat absolute metric values as point estimates.
+2. **Single-vendor synthetic-style data.** Sparkify is a fictional service with
+   uniform behavior distributions and no seasonality; real CSM dashboards will
+   see drift not represented here.
+3. **Class imbalance handled with `scale_pos_weight`, not resampling.** This
+   keeps test set churn rates honest but biases the decision threshold; you
+   may want to recalibrate `predict_proba` (e.g. isotonic) for downstream
+   threshold-based alerting.
+4. **`subscription_level` is near-noise** on Sparkify. Do not rely on it for
+   plan-tier-specific behavior in production; the live `User.plan_type`
+   distribution is much wider (free / starter / pro / enterprise).
+5. **`session_count_30d` semantics differ between training and inference.**
+   In training we have raw `sessionId`; in live Postgres we don't, so we
+   reconstruct sessions by gap-clustering (>30 min idle = new session). This
+   is well-correlated but not identical.
+6. **No temporal cross-validation.** A user-disjoint stratified split is used,
+   not a time-aware split. Concept drift is not measured by this evaluation.
 
 ## Model Artifacts
 
-Saved to `/ml/artifacts/`:
-- `model.pkl` - Joblib-serialized XGBClassifier
-- `feature_names.json` - List of 8 feature names (for correct order at inference)
-- `scaler.pkl` - Joblib-serialized StandardScaler (fitted on train)
+Saved under `ml/artifacts/`:
+
+- `model.pkl` — joblib-serialized `XGBClassifier`
+- `scaler.pkl` — joblib-serialized `StandardScaler` fit on train
+- `feature_names.json` — list of 8 feature names (inference order)
+- `correlation_report.json` — Claude / fallback churn-indicator analysis
 
 ## Inference API
 
-Endpoint: `GET /users/{user_id}/risk`
+`GET /users/{user_id}/risk` →
 
-Response:
 ```json
 {
   "user_id": "uuid",
   "risk_score": 75,
   "risk_tier": "high",
-  "top_drivers": ["days_since_last_login", "session_count_30d", "support_tickets_open"],
-  "shap_values": {
-    "days_since_last_login": 0.42,
-    "session_count_30d": -0.18,
-    "feature_usage_count": -0.05,
-    "support_tickets_open": 0.08,
-    "plan_type_encoded": 0.02,
-    "avg_session_duration_min": -0.12,
-    "days_since_signup": 0.01,
-    "login_streak_broken": 0.03
-  },
+  "top_drivers": ["days_since_last_activity", "songs_played_total", "thumbs_down_count"],
+  "shap_values": { "...": "..." },
   "model_version": "1.0"
 }
 ```
 
-## Future Improvements
-
-1. Test set holdout (currently 80/20 train/val split)
-2. Hyperparameter tuning via Bayesian optimization
-3. Feature engineering: interaction terms (e.g., `plan_type * feature_usage`)
-4. Temporal cross-validation (time-aware splits)
-5. Model monitoring: AUC drift detection, feature importance drift
-6. Claude integration for reason/action generation (Phase 2)
-
 ---
 
-**Model Version**: 1.0  
-**Training Date**: 2026-04-20  
-**Framework**: XGBoost 2.0.3 + scikit-learn 1.3.2 + SHAP 0.44.0
+**Model Version**: 1.0
+**Training Date**: 2026-04-25
+**Framework**: XGBoost 2.x + scikit-learn + SHAP + joblib
