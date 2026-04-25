@@ -30,17 +30,20 @@ class TestExtractUserFeatures:
     """Test extract_user_features function."""
 
     def test_extract_returns_correct_dict_shape(self):
-        """Test that extract_user_features returns dict with all 5 required keys."""
+        """Test that extract_user_features returns dict with all 8 required keys."""
         events = [MockEvent("feature_used", datetime.utcnow(), None)]
         result = extract_user_features(events)
 
         assert isinstance(result, dict)
         required_keys = {
+            "days_since_last_activity",
+            "session_count_30d",
             "songs_played_total",
             "thumbs_down_count",
             "thumbs_up_count",
             "add_to_playlist_count",
             "avg_session_duration_min",
+            "subscription_level",
         }
         assert set(result.keys()) == required_keys
 

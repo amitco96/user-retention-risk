@@ -1,7 +1,7 @@
 """
 Sparkify dataset loader for User Retention Risk Model.
 
-Loads and cleans Sparkify event logs (Udacity mini dataset, 128MB).
+Loads and cleans Sparkify event logs (Udacity medium dataset, ~232MB JSONL).
 Parses timestamps, labels churn, and returns clean pandas DataFrame.
 
 Usage:
@@ -51,8 +51,8 @@ def get_sparkify_data(
     7. Returns clean DataFrame sorted by userId and ts
 
     Args:
-        data_path: Path to sparkify_mini.json file.
-                   Defaults to ml/data/sparkify_mini.json
+        data_path: Path to Sparkify JSONL file.
+                   Defaults to ml/data/medium-sparkify-event-data.json
         seed: Random seed (for reproducibility, though not used in deterministic loading)
 
     Returns:
@@ -67,7 +67,13 @@ def get_sparkify_data(
 
     # Resolve data path
     if data_path is None:
-        data_path = Path(__file__).parent / "data" / "sparkify_mini.json"
+        # Prefer medium dataset; fall back to mini if medium not present
+        default_medium = Path(__file__).parent / "data" / "medium-sparkify-event-data.json"
+        default_mini = Path(__file__).parent / "data" / "sparkify_mini.json"
+        if default_medium.exists():
+            data_path = default_medium
+        else:
+            data_path = default_mini
     else:
         data_path = Path(data_path)
 
@@ -76,7 +82,7 @@ def get_sparkify_data(
     if not data_path.exists():
         raise FileNotFoundError(
             f"Sparkify dataset not found at {data_path}. "
-            "Download from Udacity/Kaggle and place at ml/data/sparkify_mini.json"
+            "Download from Udacity/Kaggle and place at ml/data/medium-sparkify-event-data.json"
         )
 
     # Load JSON file
