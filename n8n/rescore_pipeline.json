@@ -1,0 +1,225 @@
+{
+  "name": "User Retention — Nightly Rescore + Slack Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger (2am daily)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/pipeline/rescore-all",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "timeout": 600000,
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": false,
+        "sendBody": false
+      },
+      "id": "rescore-all",
+      "name": "POST /pipeline/rescore-all",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 320],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "pipeline-bearer",
+          "name": "Pipeline Bearer Token"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "critical-gt-zero",
+              "leftValue": "={{ $json.critical }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-critical",
+      "name": "IF critical_count > 0",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [720, 320]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://host.docker.internal:8000/pipeline/critical-users",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "fetch-critical",
+      "name": "GET /pipeline/critical-users",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 240],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "pipeline-bearer",
+          "name": "Pipeline Bearer Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#retention-alerts"
+        },
+        "text": "=:rotating_light: *Retention Alert*: {{ $('POST /pipeline/rescore-all').item.json.critical }} users in critical tier\n{{ $json.users.map(u => `• ${u.user_id} — ${u.risk_score}/100 — ${u.recommended_action}`).join('\\n') }}",
+        "otherOptions": {}
+      },
+      "id": "slack-alert",
+      "name": "Slack: post to #retention-alerts",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [1200, 240],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-retention",
+          "name": "Slack — Retention Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#retention-alerts"
+        },
+        "text": "=:x: *Rescore pipeline failed*\n```{{ $json.error || $json.message || JSON.stringify($json) }}```",
+        "otherOptions": {}
+      },
+      "id": "slack-error",
+      "name": "Slack: post error",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [960, 480],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-retention",
+          "name": "Slack — Retention Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (2am daily)": {
+      "main": [
+        [
+          {
+            "node": "POST /pipeline/rescore-all",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST /pipeline/rescore-all": {
+      "main": [
+        [
+          {
+            "node": "IF critical_count > 0",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack: post error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF critical_count > 0": {
+      "main": [
+        [
+          {
+            "node": "GET /pipeline/critical-users",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "GET /pipeline/critical-users": {
+      "main": [
+        [
+          {
+            "node": "Slack: post to #retention-alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveExecutionProgress": true
+  },
+  "meta": {
+    "description": "Nightly at 2am: rescore every user, then post Slack alert if any critical-tier users exist. On rescore failure, post error to #retention-alerts. Bearer credential: 'Pipeline Bearer Token' must be configured as an HTTP Header Auth credential with Name='Authorization' and Value='Bearer <API_PIPELINE_SECRET>'."
+  },
+  "tags": [
+    { "name": "retention" },
+    { "name": "nightly" }
+  ]
+}

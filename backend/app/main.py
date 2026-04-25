@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.app.routers import health, users, cohorts
+from backend.app.routers import health, users, cohorts, pipeline, alerts
 from backend.app.db.session import create_tables
 
 logging.basicConfig(level=logging.INFO)
@@ -19,6 +19,8 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(cohorts.router, prefix="/cohorts", tags=["cohorts"])
+app.include_router(pipeline.router, prefix="/pipeline", tags=["pipeline"])
+app.include_router(alerts.router, prefix="/pipeline", tags=["pipeline"])
 
 
 @app.on_event("startup")

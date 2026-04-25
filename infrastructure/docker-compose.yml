@@ -14,6 +14,7 @@ services:
         condition: service_healthy
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/retention_dev
+      - API_PIPELINE_SECRET=${API_PIPELINE_SECRET}
 
   postgres:
     image: postgres:16-alpine

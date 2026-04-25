@@ -269,10 +269,14 @@ Respond only in JSON: {"reason": "...", "action": "..."}
 
 ## Security Rules
 
-- No hardcoded `ANTHROPIC_API_KEY`, `DATABASE_URL`, or AWS credentials anywhere
+- No hardcoded `ANTHROPIC_API_KEY`, `DATABASE_URL`, `API_PIPELINE_SECRET`, or AWS credentials anywhere
 - Secrets via `os.environ` locally, AWS Secrets Manager in production
 - Rate limit `/users/{id}/risk`: 100 req/min per IP (slowapi)
 - SQL via SQLAlchemy ORM only — no raw f-string queries
+- `/pipeline/*` endpoints (rescore-all, critical-users) are bearer-token protected
+  via `API_PIPELINE_SECRET` for internal callers (n8n) only.
+  Generate with `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
+  Fails closed: if the env var is unset, every request returns 401.
 
 ---
 
